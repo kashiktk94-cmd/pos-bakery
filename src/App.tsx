@@ -12,6 +12,34 @@ export default function App() {
   const { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume, receiptData, closeReceipt } = usePOS();
   const [isModeAdmin, setIsModeAdmin] = useState(false);
 
+  // 🌟 NAYA: Parchi ko text bana kar Share karne ka function
+  const handleShare = async () => {
+    if (!receiptData) return;
+    
+    let text = `🏪 KASHIF BAKERY & MART\n`;
+    text += `Date: ${receiptData.date}\n-----------------------\n`;
+    receiptData.items.forEach(item => {
+      text += `${item.product_name || item.name} (x${item.qty}) = Rs. ${item.price * item.qty}\n`;
+    });
+    text += `-----------------------\n`;
+    if (receiptData.discount > 0) text += `Discount: -Rs. ${receiptData.discount}\n`;
+    text += `Total Paid: Rs. ${receiptData.total}\n`;
+    text += `Thank You For Shopping!\n`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Bakery Receipt',
+          text: text,
+        });
+      } catch (err) {
+        console.log("Share cancel kar diya", err);
+      }
+    } else {
+      alert("⚠️ Aap ki App/Browser mein Share ka option support nahi kar raha.");
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -21,34 +49,26 @@ export default function App() {
         .main-container { padding: 15px; max-width: 900px; margin: 0 auto; font-family: 'Inter', sans-serif; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
-        /* 🖨️ PRINT JADOO */
         @media screen { .print-only { display: none !important; } }
         
         @media print {
           .hide-on-print { display: none !important; }
           .print-only { display: block !important; }
           body { background: white; margin: 0; padding: 0; }
-          
           .receipt-overlay { position: static !important; background: white !important; padding: 0 !important; }
           .receipt-box { box-shadow: none !important; width: 100% !important; max-width: 100% !important; border: none !important; color: black !important; }
         }
 
-        /* 📱 MOBILE RESPONSIVE FIXES */
         @media (max-width: 600px) {
           .main-container { padding: 10px; }
           .header-flex { flex-direction: column; gap: 15px; text-align: center; }
           .header-flex button { width: 100%; padding: 15px; font-size: 16px; }
           table th, table td { padding: 8px 4px !important; font-size: 13px !important; }
           input { width: 100% !important; }
-          
-          /* 🌟 NAYA: Mobile par Print button chupanay ki CSS */
-          .desktop-print-btn { display: none !important; }
         }
       `}</style>
 
-      {/* 💻 MAIN APP CONTAINER */}
       <div className="main-container hide-on-print">
-        
         <div className="header-flex">
           <h1 style={{ margin: 0 }}>🏪 Bakery POS</h1>
           <button 
@@ -119,19 +139,22 @@ export default function App() {
               <p>System by wp_doctr</p>
             </div>
 
-            <div className="hide-on-print" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+            {/* 🌟 NAYA: 3 Buttons (Print, Share, Close) */}
+            <div className="hide-on-print" style={{ display: 'flex', gap: '5px', marginTop: '20px' }}>
               
-              {/* 🌟 NAYA: Yahan hum ne button ko 'desktop-print-btn' class de di hai */}
-              <button className="desktop-print-btn" onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+              <button onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                 🖨️ Print
               </button>
+
+              <button onClick={handleShare} style={{ flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                📲 Share
+              </button>
               
-              <button onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+              <button onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                 ❌ Close
               </button>
+
             </div>
-            <p className="hide-on-print" style={{ textAlign: 'center', fontSize: '10px', color: '#999', marginTop: '10px', marginBottom: 0 }}>* Mobile par screenshot lein *</p>
-            
           </div>
         </div>
       )}
