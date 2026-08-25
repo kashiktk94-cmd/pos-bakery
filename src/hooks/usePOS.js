@@ -6,6 +6,9 @@ export function usePOS() {
   const [heldCart, setHeldCart] = useState(null);
   const [dbProducts, setDbProducts] = useState([]); 
   const [discount, setDiscount] = useState(0); 
+  
+  // 🌟 NAYA: Screen par parchi dikhane ke liye state
+  const [receiptData, setReceiptData] = useState(null);
 
   const fetchProducts = async () => {
     try {
@@ -50,31 +53,7 @@ export function usePOS() {
   const handleCheckout = async () => {
     if (cart.length === 0) return alert('Tokri khali hai!');
     
-    // 🌟 1. SAB SE PEHLE PARCHI KA TEXT BANAYEIN
-    let receiptText = "🏪 KASHIF BAKERY & MART\n-----------------------\n";
-    cart.forEach(item => {
-      receiptText += `${item.product_name || item.name} (x${item.qty}) = Rs. ${item.price * item.qty}\n`;
-    });
-    receiptText += "-----------------------\n";
-    if (discount > 0) receiptText += `Discount: -Rs. ${discount}\n`;
-    receiptText += `Total Paid: Rs. ${finalAmount}\n`;
-    receiptText += "Thank You For Shopping!\nSystem by wp_doctr";
-
-    // 🌟 2. FAURAN SHARE MENU KHOLAIN (Bina kisi alert ke, taake block na ho)
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'Bakery Receipt',
-          text: receiptText,
-        });
-      } else {
-        window.print();
-      }
-    } catch (error) {
-      console.log("Share menu closed by user");
-    }
-
-    // 🌟 3. US KE BAAD DATABASE MEIN SAVE KAREIN
+    // Database Save
     for (let item of cart) {
       const remainingStock = item.quantity - item.qty; 
       await fetch(`${SUPABASE_URL}/rest/v1/inventory?id=eq.${item.id}`, {
@@ -86,13 +65,23 @@ export function usePOS() {
       await fetch(`${SUPABASE_URL}/rest/v1/sales`, {
         method: 'POST', headers: headers, body: JSON.stringify({ total_amount: finalAmount }) 
       });
-    } catch (err) { console.error("Sale error:", err); }
+    } catch (err) { console.error(err); }
 
-    // 🌟 4. AAKHIR MEIN TOKRI KHALI KAR DEIN
+    // 🌟 NAYA: Parchi ka data screen ke liye save kar lo (Share/Alert hata diya)
+    setReceiptData({
+      items: [...cart],
+      total: finalAmount,
+      discount: discount,
+      date: new Date().toLocaleString('en-PK')
+    });
+
     setCart([]); 
     setDiscount(0); 
     fetchProducts(); 
   };
 
-  return { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume };
+  // Parchi band karne ka function
+  const closeReceipt = () => setReceiptData(null);
+
+  return { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume, receiptData, closeReceipt };
 }
