@@ -50,7 +50,7 @@ export function usePOS() {
   const handleCheckout = async () => {
     if (cart.length === 0) return alert('Tokri khali hai!');
     
-    // Database updates
+    // Database update karein
     for (let item of cart) {
       const remainingStock = item.quantity - item.qty; 
       await fetch(`${SUPABASE_URL}/rest/v1/inventory?id=eq.${item.id}`, {
@@ -64,16 +64,38 @@ export function usePOS() {
       });
     } catch (err) { console.error("Sale error:", err); }
 
-    // 🌟 NAYA: Mobile Print Fix (Pehle alert dega, phir print khulega, phir tokri khali hogi)
-    alert("✅ Bill generate ho gaya hai! Ok press karein taake voucher print/save ho sakay.");
-    window.print(); 
+    // 🌟 1. NAYA ALERT MESSAGE (Is se aap ko update verify hoga!)
+    alert("🚀 Vercel Update Test: Bill ban gaya hai! Ab aap receipt share kar sakte hain.");
     
-    // 1.5 seconds ka delay taake mobile browser araam se PDF popup khol le
-    setTimeout(() => {
-      setCart([]); 
-      setDiscount(0); 
-      fetchProducts(); 
-    }, 1500);
+    // 🌟 2. NAYA: Parchi ko text form mein banana
+    let receiptText = "🏪 KASHIF BAKERY & MART\n-----------------------\n";
+    cart.forEach(item => {
+      receiptText += `${item.product_name || item.name} (x${item.qty}) = Rs. ${item.price * item.qty}\n`;
+    });
+    receiptText += "-----------------------\n";
+    if (discount > 0) receiptText += `Discount: -Rs. ${discount}\n`;
+    receiptText += `Total Paid: Rs. ${finalAmount}\n`;
+    receiptText += "Thank You For Shopping!\nDeveloper: wp_doctr";
+
+    // 🌟 3. NAYA: Mobile Share Menu (WhatsApp / Bluetooth)
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Bakery Receipt',
+          text: receiptText,
+        });
+      } else {
+        // Agar computer par chala rahe hain toh wahi purana print
+        window.print();
+      }
+    } catch (error) {
+      console.log("Share cancel kar diya", error);
+    }
+
+    // Tokri khali karein
+    setCart([]); 
+    setDiscount(0); 
+    fetchProducts(); 
   };
 
   return { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume };
