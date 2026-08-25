@@ -12,10 +12,9 @@ export default function App() {
   const { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume, receiptData, closeReceipt } = usePOS();
   const [isModeAdmin, setIsModeAdmin] = useState(false);
 
-  // 🌟 NAYA: Parchi ko text bana kar Share karne ka function
-  const handleShare = async () => {
-    if (!receiptData) return;
-    
+  // 🌟 NAYA: Parchi ka text banane ka function
+  const getReceiptText = () => {
+    if (!receiptData) return "";
     let text = `🏪 KASHIF BAKERY & MART\n`;
     text += `Date: ${receiptData.date}\n-----------------------\n`;
     receiptData.items.forEach(item => {
@@ -25,19 +24,25 @@ export default function App() {
     if (receiptData.discount > 0) text += `Discount: -Rs. ${receiptData.discount}\n`;
     text += `Total Paid: Rs. ${receiptData.total}\n`;
     text += `Thank You For Shopping!\n`;
+    return text;
+  };
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Bakery Receipt',
-          text: text,
-        });
-      } catch (err) {
-        console.log("Share cancel kar diya", err);
-      }
-    } else {
-      alert("⚠️ Aap ki App/Browser mein Share ka option support nahi kar raha.");
-    }
+  // 🌟 NAYA: Direct WhatsApp par bhejne ka function (Bina kisi share menu ke)
+  const handleWhatsAppShare = () => {
+    const text = getReceiptText();
+    const encodedText = encodeURIComponent(text);
+    // Yeh direct WhatsApp ka link khol dega
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+  };
+
+  // 🌟 NAYA: Text Copy karne ka function
+  const handleCopyText = () => {
+    const text = getReceiptText();
+    navigator.clipboard.writeText(text).then(() => {
+      alert("✅ Parchi copy ho gayi hai! Ab aap kisi ko bhi message mein paste kar sakte hain.");
+    }).catch(() => {
+      alert("⚠️ Copy karne mein masla hua.");
+    });
   };
 
   return (
@@ -59,12 +64,16 @@ export default function App() {
           .receipt-box { box-shadow: none !important; width: 100% !important; max-width: 100% !important; border: none !important; color: black !important; }
         }
 
-        @media (max-width: 600px) {
+        /* 📱 Mobile Par Print Button Chupane Ke Liye (Size 768px tak kar diya hai) */
+        @media (max-width: 768px) {
           .main-container { padding: 10px; }
           .header-flex { flex-direction: column; gap: 15px; text-align: center; }
           .header-flex button { width: 100%; padding: 15px; font-size: 16px; }
           table th, table td { padding: 8px 4px !important; font-size: 13px !important; }
           input { width: 100% !important; }
+          
+          /* Print Button hamesha chupa rahega mobile par */
+          .desktop-print-btn { display: none !important; }
         }
       `}</style>
 
@@ -139,18 +148,23 @@ export default function App() {
               <p>System by wp_doctr</p>
             </div>
 
-            {/* 🌟 NAYA: 3 Buttons (Print, Share, Close) */}
-            <div className="hide-on-print" style={{ display: 'flex', gap: '5px', marginTop: '20px' }}>
+            {/* 🌟 NAYA: 4 Smart Buttons */}
+            <div className="hide-on-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '20px' }}>
               
-              <button onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+              {/* Yeh button mobile par nahi dikhega */}
+              <button className="desktop-print-btn" onClick={() => window.print()} style={{ flex: '1 1 45%', backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                 🖨️ Print
               </button>
 
-              <button onClick={handleShare} style={{ flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
-                📲 Share
+              <button onClick={handleWhatsAppShare} style={{ flex: '1 1 45%', backgroundColor: '#25D366', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                💬 WhatsApp
+              </button>
+
+              <button onClick={handleCopyText} style={{ flex: '1 1 45%', backgroundColor: '#64748b', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+                📋 Copy
               </button>
               
-              <button onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
+              <button onClick={closeReceipt} style={{ flex: '1 1 45%', backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>
                 ❌ Close
               </button>
 
