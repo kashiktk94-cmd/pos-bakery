@@ -1,216 +1,191 @@
-import React, { useState, useEffect } from 'react';
-import { SUPABASE_URL, headers } from '../config/supabase';
+// @ts-nocheck
+import React, { useState } from 'react';
 
-export default function LedgerPanel() {
-  const [customers, setCustomers] = useState([]);
-  const [name, setName] = useState('');
+import { usePOS } from './hooks/usePOS';
+import ScannerInput from './components/ScannerInput';
+import CartTable from './components/CartTable';
+import CheckoutPanel from './components/CheckoutPanel';
+import DailySalesReport from './components/DailySalesReport';
+import AdminDashboard from './components/AdminDashboard';
+import LedgerPanel from './components/LedgerPanel'; 
+
+const ADMIN_PIN = "1234";
+
+export default function App() {
+  const { cart, totalAmount, finalAmount, discount, setDiscount, heldCart, handleScan, handleCheckout, handleHold, handleResume, receiptData, closeReceipt } = usePOS();
   
-  // 🌟 NAYA: Ek customer ka mukammal record dekhne ke liye states
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [entries, setEntries] = useState([]);
+  const [isModeAdmin, setIsModeAdmin] = useState(false);
+  const [showLedger, setShowLedger] = useState(false); 
 
-  // 1. Saare customers mangwana
-  const fetchLedger = async () => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/ledger?select=*&order=id.desc`, { headers });
-      const data = await res.json();
-      if (!data.error) setCustomers(data);
-    } catch (err) { console.error(err); }
+  const handleAdminToggle = () => {
+    if (!isModeAdmin) {
+      const pin = window.prompt("🔒 Admin Panel kholne ke liye PIN Code darj karein:");
+      if (pin === ADMIN_PIN) {
+        setIsModeAdmin(true);
+        setShowLedger(false); 
+      } else if (pin !== null) {
+        alert("❌ Ghalat PIN code! Aap ko ijazat nahi hai.");
+      }
+    } else {
+      setIsModeAdmin(false);
+    }
   };
 
-  // 2. Ek makhsoos customer ki tafseel mangwana
-  const fetchEntries = async (customerId) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/khata_entries?customer_id=eq.${customerId}&order=id.asc`, { headers });
-      const data = await res.json();
-      if (!data.error) setEntries(data);
-    } catch (err) { console.error(err); }
+  const handleLedgerToggle = () => {
+    setShowLedger(!showLedger);
+    setIsModeAdmin(false); 
   };
 
-  useEffect(() => { fetchLedger(); }, []);
-  useEffect(() => { 
-    if (selectedCustomer) fetchEntries(selectedCustomer.id); 
-  }, [selectedCustomer]);
-
-  // Naya Customer Banana
-  const addCustomer = async (e) => {
-    e.preventDefault();
-    if (!name.trim()) return alert("Naam likhna zaroori hai!");
-    await fetch(`${SUPABASE_URL}/rest/v1/ledger`, {
-      method: 'POST', headers, body: JSON.stringify({ name, balance: 0 })
+  const getReceiptText = () => {
+    if (!receiptData) return "";
+    let text = `🏪 KASHIF BAKERY & MART\n`;
+    text += `Date: ${receiptData.date}\n-----------------------\n`;
+    receiptData.items.forEach(item => {
+      text += `${item.product_name || item.name} (x${item.qty}) = Rs. ${item.price * item.qty}\n`;
     });
-    setName('');
-    fetchLedger();
+    text += `-----------------------\n`;
+    if (receiptData.discount > 0) text += `Discount: -Rs. ${receiptData.discount}\n`;
+    text += `Total Paid: Rs. ${receiptData.total}\n`;
+    text += `Thank You For Shopping!\n`;
+    return text;
   };
 
-  // 🌟 NAYA: Tafseeli Entry (Udhaar ya Wasooli) Karna
-  const addTransaction = async (type) => {
-    // Agar udhaar hai toh poochega "Kis cheez ka?", agar wasooli hai toh "Cash" likhega
-    const desc = type === 'udhaar' ? prompt("Kis cheez ka udhaar liya? (Maslan: 2 Bread, 1 Doodh):") : "Cash Wasooli";
-    if (desc === null) return; 
-
-    const amountStr = prompt(type === 'udhaar' ? 'Kitna UDHAAR (Rs) ka samaan hai?' : 'Kitne PAISE WASOOL hue?');
-    if (!amountStr || isNaN(amountStr)) return;
-    
-    const amount = Number(amountStr);
-    const currentBalance = selectedCustomer.balance;
-    const newBalance = type === 'udhaar' ? currentBalance + amount : currentBalance - amount;
-
-    // A. Main Balance Update Karein
-    await fetch(`${SUPABASE_URL}/rest/v1/ledger?id=eq.${selectedCustomer.id}`, {
-      method: 'PATCH', headers, body: JSON.stringify({ balance: newBalance })
-    });
-
-    // B. Entry Table Mein Mukammal Record Save Karein
-    await fetch(`${SUPABASE_URL}/rest/v1/khata_entries`, {
-      method: 'POST', headers, body: JSON.stringify({
-        customer_id: selectedCustomer.id,
-        description: desc,
-        udhaar: type === 'udhaar' ? amount : 0,
-        wasooli: type === 'wasooli' ? amount : 0,
-        balance: newBalance
-      })
-    });
-
-    // Screen Update
-    setSelectedCustomer({ ...selectedCustomer, balance: newBalance });
-    fetchLedger(); // Baher wali list update
+  const handleWhatsAppShare = () => {
+    const text = getReceiptText();
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
   };
 
-  // 📊 EXCEL DOWNLOAD JADOO
-  const handleDownloadExcel = () => {
-    let csv = "Tareekh (Date),Tafseel (Detail),Udhaar (Dr),Wasooli (Cr),Baqaya (Balance)\n";
-    entries.forEach(e => {
-      const date = new Date(e.created_at).toLocaleDateString('en-PK');
-      csv += `"${date}","${e.description}",${e.udhaar},${e.wasooli},${e.balance}\n`;
+  const handleCopyText = () => {
+    const text = getReceiptText();
+    navigator.clipboard.writeText(text).then(() => {
+      alert("✅ Parchi copy ho gayi hai! Ab aap kisi ko bhi message mein paste kar sakte hain.");
+    }).catch(() => {
+      alert("⚠️ Copy karne mein masla hua.");
     });
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${selectedCustomer.name}_Khata.csv`;
-    link.click();
   };
 
-  // 🖨️ PDF / PRINT JADOO
-  const handlePrintPDF = () => {
-    const printWindow = window.open('', '_blank');
-    let html = `
-      <html><head><title>Khata - ${selectedCustomer.name}</title>
-      <style>
-        body { font-family: Arial; padding: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-        th { background-color: #f0f0f0; }
-      </style></head><body>
-      <h2>🏪 Kashif Bakery & Mart</h2>
-      <h3>📓 Khata: ${selectedCustomer.name} (Total Baqaya: Rs. ${selectedCustomer.balance})</h3>
-      <table>
-        <tr><th>Tareekh</th><th>Tafseel</th><th>Udhaar</th><th>Wasooli</th><th>Baqaya</th></tr>
-    `;
-    entries.forEach(e => {
-      const date = new Date(e.created_at).toLocaleDateString('en-PK');
-      html += `<tr><td>${date}</td><td>${e.description}</td><td>${e.udhaar > 0 ? e.udhaar : '-'}</td><td>${e.wasooli > 0 ? e.wasooli : '-'}</td><td><strong>${e.balance}</strong></td></tr>`;
-    });
-    html += `</table></body></html>`;
-    
-    printWindow.document.write(html);
-    printWindow.document.close();
-    setTimeout(() => { printWindow.print(); }, 500);
-  };
-
-  // -----------------------------------------------------
-  // 1. TAFSEELI KHATA SCREEN (Jab kisi customer par click ho)
-  // -----------------------------------------------------
-  if (selectedCustomer) {
-    return (
-      <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #eee', paddingBottom: '10px', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <button onClick={() => setSelectedCustomer(null)} style={{ backgroundColor: '#64748b', color: 'white', border: 'none', padding: '5px 10px', borderRadius: '5px', cursor: 'pointer', marginBottom: '5px' }}>⬅️ Back</button>
-            <h2 style={{ margin: '5px 0' }}>📓 Khata: {selectedCustomer.name}</h2>
-            <h3 style={{ margin: 0, color: selectedCustomer.balance > 0 ? '#ef4444' : '#10b981' }}>Total Baqaya: Rs. {selectedCustomer.balance}</h3>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={handleDownloadExcel} style={{ backgroundColor: '#10b981', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>⬇️ Excel</button>
-            <button onClick={handlePrintPDF} style={{ backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>🖨️ Print / PDF</button>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-          <button onClick={() => addTransaction('udhaar')} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>➕ Naya Udhaar Likhain</button>
-          <button onClick={() => addTransaction('wasooli')} style={{ flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '15px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>➖ Wasooli (Payment)</button>
-        </div>
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
-                <th style={{ padding: '10px' }}>Tareekh</th>
-                <th style={{ padding: '10px' }}>Tafseel</th>
-                <th style={{ padding: '10px', color: '#ef4444' }}>Udhaar</th>
-                <th style={{ padding: '10px', color: '#10b981' }}>Wasooli</th>
-                <th style={{ padding: '10px' }}>Baqaya</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map(e => (
-                <tr key={e.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '10px' }}>{new Date(e.created_at).toLocaleDateString('en-PK')}</td>
-                  <td style={{ padding: '10px' }}>{e.description}</td>
-                  <td style={{ padding: '10px', color: '#ef4444' }}>{e.udhaar > 0 ? `Rs. ${e.udhaar}` : '-'}</td>
-                  <td style={{ padding: '10px', color: '#10b981' }}>{e.wasooli > 0 ? `Rs. ${e.wasooli}` : '-'}</td>
-                  <td style={{ padding: '10px', fontWeight: 'bold' }}>Rs. {e.balance}</td>
-                </tr>
-              ))}
-              {entries.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', padding: '20px', color: '#666' }}>Koi record nahi hai.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  }
-
-  // -----------------------------------------------------
-  // 2. MAIN CUSTOMER LIST SCREEN
-  // -----------------------------------------------------
   return (
-    <div style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-      <h2 style={{ borderBottom: '2px solid #eee', paddingBottom: '10px', margin: '0 0 15px 0' }}>📓 Udhaar Khata (Customers)</h2>
-      
-      <form onSubmit={addCustomer} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <input 
-          value={name} 
-          onChange={e => setName(e.target.value)} 
-          placeholder="Naye customer ka naam likhein..." 
-          style={{ flex: 1, padding: '12px', border: '1px solid #ccc', borderRadius: '5px' }} 
-        />
-        <button type="submit" style={{ padding: '12px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>➕ Add Person</button>
-      </form>
+    <>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; background-color: #f8fafc; }
+        
+        .main-container { padding: 15px; max-width: 900px; margin: 0 auto; font-family: 'Inter', sans-serif; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        
+        @media screen { .print-only { display: none !important; } }
+        
+        @media print {
+          .hide-on-print { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white; margin: 0; padding: 0; }
+          .receipt-overlay { position: static !important; background: white !important; padding: 0 !important; }
+          .receipt-box { box-shadow: none !important; width: 100% !important; max-width: 100% !important; border: none !important; color: black !important; }
+        }
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
-              <th style={{ padding: '12px' }}>Naam</th>
-              <th style={{ padding: '12px' }}>Total Udhaar</th>
-              <th style={{ padding: '12px' }}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
-                <td style={{ padding: '12px', fontWeight: 'bold' }}>{c.name}</td>
-                <td style={{ padding: '12px', fontWeight: 'bold', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>Rs. {c.balance}</td>
-                <td style={{ padding: '12px' }}>
-                  <button onClick={() => setSelectedCustomer(c)} style={{ backgroundColor: '#f59e0b', color: 'white', border: 'none', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>
-                    📖 Khata Dekhein
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        @media (max-width: 768px) {
+          .main-container { padding: 10px; }
+          .header-flex { flex-direction: column; gap: 15px; text-align: center; }
+          .header-flex .buttons-group { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+          .header-flex button { width: 100%; padding: 15px; font-size: 16px; }
+          table th, table td { padding: 8px 4px !important; font-size: 13px !important; }
+          input { width: 100% !important; }
+          .desktop-print-btn { display: none !important; }
+        }
+      `}</style>
+
+      <div className="main-container hide-on-print">
+        <div className="header-flex">
+          <h1 style={{ margin: 0 }}>🏪 Bakery POS</h1>
+          
+          <div className="buttons-group" style={{ display: 'flex', gap: '10px' }}>
+            <button 
+              onClick={handleLedgerToggle} 
+              style={{ backgroundColor: showLedger ? '#f59e0b' : '#10b981', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              {showLedger ? '⬅️ Back to POS' : '📓 Khata'}
+            </button>
+
+            <button 
+              onClick={handleAdminToggle} 
+              style={{ backgroundColor: isModeAdmin ? '#ef4444' : '#334155', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
+            >
+              {isModeAdmin ? '⬅️ Back to POS' : '⚙️ Admin'}
+            </button>
+          </div>
+        </div>
+
+        {isModeAdmin ? (
+          <AdminDashboard />
+        ) : showLedger ? (
+          <LedgerPanel />
+        ) : (
+          <>
+            <DailySalesReport refreshTrigger={cart.length} />
+            <ScannerInput onScan={handleScan} />
+            <CartTable cart={cart} totalAmount={totalAmount} />
+            
+            <CheckoutPanel 
+              totalAmount={totalAmount} 
+              finalAmount={finalAmount}
+              discount={discount}
+              setDiscount={setDiscount}
+              onCheckout={handleCheckout} 
+              onHold={handleHold} 
+              onResume={handleResume} 
+              isHeld={heldCart !== null} 
+            />
+          </>
+        )}
       </div>
-    </div>
+
+      {receiptData && (
+        <div className="receipt-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
+          
+          <div className="receipt-box" style={{ backgroundColor: '#fff', padding: '20px', width: '100%', maxWidth: '400px', borderRadius: '10px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', fontFamily: 'monospace' }}>
+            
+            <div style={{ textAlign: 'center', borderBottom: '2px dashed #ccc', paddingBottom: '10px', marginBottom: '15px' }}>
+              <h2 style={{ margin: '0 0 5px 0' }}>Kashif Bakery</h2>
+              <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>{receiptData.date}</p>
+            </div>
+            
+            <div style={{ marginBottom: '15px', minHeight: '100px' }}>
+              {receiptData.items.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span>{item.product_name || item.name} (x{item.qty})</span>
+                  <span>Rs. {item.price * item.qty}</span>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{ borderTop: '2px dashed #ccc', paddingTop: '10px' }}>
+              {receiptData.discount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#ef4444' }}>
+                  <span>Discount</span>
+                  <span>- Rs. {receiptData.discount}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '18px', marginTop: '10px' }}>
+                <span>Total Paid</span>
+                <span>Rs. {receiptData.total.toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="print-only" style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px' }}>
+              <p>Thank You For Shopping!</p>
+              <p>System by wp_doctr</p>
+            </div>
+
+            <div className="hide-on-print" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '20px' }}>
+              <button className="desktop-print-btn" onClick={() => window.print()} style={{ flex: '1 1 45%', backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>🖨️ Print</button>
+              <button onClick={handleWhatsAppShare} style={{ flex: '1 1 45%', backgroundColor: '#25D366', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>💬 WhatsApp</button>
+              <button onClick={handleCopyText} style={{ flex: '1 1 45%', backgroundColor: '#64748b', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>📋 Copy</button>
+              <button onClick={closeReceipt} style={{ flex: '1 1 45%', backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '10px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>❌ Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
