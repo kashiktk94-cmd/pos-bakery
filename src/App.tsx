@@ -21,31 +21,32 @@ export default function App() {
         .main-container { padding: 15px; max-width: 900px; margin: 0 auto; font-family: 'Inter', sans-serif; }
         .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         
-        /* 🖨️ PRINT JADOO: Pata lagayega ke kya print karna hai */
+        /* 🖨️ PRINT JADOO */
         @media screen { .print-only { display: none !important; } }
         
         @media print {
-          /* Peeche wala sara hissa (Dukan) chupa do */
           .hide-on-print { display: none !important; }
           .print-only { display: block !important; }
           body { background: white; margin: 0; padding: 0; }
           
-          /* Sirf Parchi (Popup) ko kaghaz par fit karo */
           .receipt-overlay { position: static !important; background: white !important; padding: 0 !important; }
           .receipt-box { box-shadow: none !important; width: 100% !important; max-width: 100% !important; border: none !important; color: black !important; }
         }
 
-        /* MOBILE RESPONSIVE FIXES */
+        /* 📱 MOBILE RESPONSIVE FIXES */
         @media (max-width: 600px) {
           .main-container { padding: 10px; }
           .header-flex { flex-direction: column; gap: 15px; text-align: center; }
           .header-flex button { width: 100%; padding: 15px; font-size: 16px; }
           table th, table td { padding: 8px 4px !important; font-size: 13px !important; }
           input { width: 100% !important; }
+          
+          /* 🌟 NAYA: Mobile par Print button chupanay ki CSS */
+          .desktop-print-btn { display: none !important; }
         }
       `}</style>
 
-      {/* 💻 MAIN APP CONTAINER (Print ke waqt yeh poora chup jayega) */}
+      {/* 💻 MAIN APP CONTAINER */}
       <div className="main-container hide-on-print">
         
         <div className="header-flex">
@@ -80,7 +81,7 @@ export default function App() {
         )}
       </div>
 
-      {/* 🌟 E-RECEIPT POPUP (Screen aur Print dono ke liye) */}
+      {/* 🌟 E-RECEIPT POPUP */}
       {receiptData && (
         <div className="receipt-overlay" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, padding: '20px' }}>
           
@@ -113,22 +114,23 @@ export default function App() {
               </div>
             </div>
 
-            {/* Print Hote Waqt Sirf Yeh Message Aayega */}
             <div className="print-only" style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px' }}>
               <p>Thank You For Shopping!</p>
               <p>System by wp_doctr</p>
             </div>
 
-            {/* Screen Par Sirf Yeh Buttons Nazar Aayenge */}
             <div className="hide-on-print" style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
+              
+              {/* 🌟 NAYA: Yahan hum ne button ko 'desktop-print-btn' class de di hai */}
+              <button className="desktop-print-btn" onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
                 🖨️ Print
               </button>
+              
               <button onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
                 ❌ Close
               </button>
             </div>
-            <p className="hide-on-print" style={{ textAlign: 'center', fontSize: '10px', color: '#999', marginTop: '10px', marginBottom: 0 }}>* Mobile par nahi chalay toh screenshot lein *</p>
+            <p className="hide-on-print" style={{ textAlign: 'center', fontSize: '10px', color: '#999', marginTop: '10px', marginBottom: 0 }}>* Mobile par screenshot lein *</p>
             
           </div>
         </div>
