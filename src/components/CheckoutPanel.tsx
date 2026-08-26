@@ -1,43 +1,67 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-export default function CheckoutPanel({ totalAmount, finalAmount, discount, setDiscount, onCheckout, onHold, onResume, isHeld }) {
-  const styles = {
-    panel: { backgroundColor: '#1e293b', padding: '20px', borderRadius: '10px', color: 'white', textAlign: 'center' },
-    title: { margin: '0 0 10px 0', color: '#94a3b8' },
-    amount: { fontSize: '36px', margin: '0 0 20px 0', color: '#10b981' },
-    discountRow: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px' },
-    input: { padding: '8px', fontSize: '16px', borderRadius: '5px', border: 'none', width: '100px', textAlign: 'center' },
-    payBtn: { backgroundColor: '#10b981', color: 'white', width: '100%', padding: '15px', fontSize: '18px', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer', marginBottom: '10px' },
-    actionRow: { display: 'flex', gap: '10px' },
-    holdBtn: { backgroundColor: '#f59e0b', color: 'white', flex: 1, padding: '10px', fontSize: '16px', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer' },
-    resumeBtn: { backgroundColor: '#3b82f6', color: 'white', flex: 1, padding: '10px', fontSize: '16px', fontWeight: 'bold', border: 'none', borderRadius: '8px', cursor: 'pointer' }
+export default function CheckoutPanel({ totalAmount, finalAmount, discount, setDiscount, onCheckout, onCreditCheckout, onHold, onResume, isHeld, customers }) {
+  const isCartEmpty = totalAmount <= 0;
+  const [showUdhaarModal, setShowUdhaarModal] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+
+  const handleUdhaarSubmit = () => {
+    if (!selectedCustomerId) return alert("⚠️ Bara-e-meharbani customer select karein!");
+    const customer = customers.find(c => c.id.toString() === selectedCustomerId);
+    onCreditCheckout(customer);
+    setShowUdhaarModal(false);
+    setSelectedCustomerId('');
   };
 
   return (
-    <div className="hide-on-print" style={styles.panel}>
-      <h4 style={styles.title}>Subtotal: Rs. {totalAmount.toLocaleString()}</h4>
-      
-      {/* 🌟 NAYA: Discount ka Input Box */}
-      <div style={styles.discountRow}>
-        <label>Discount (Rs): </label>
-        <input 
-          type="number" 
-          min="0" 
-          value={discount === 0 ? '' : discount} 
-          onChange={(e) => setDiscount(Number(e.target.value))} 
-          placeholder="0" 
-          style={styles.input} 
-        />
+    <div style={{ position: 'relative', marginTop: '20px', padding: '20px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'center' }}>
+        <span style={{ fontSize: '18px', color: '#64748b', fontWeight: 'bold' }}>Total Bill:</span>
+        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a' }}>Rs. {totalAmount.toLocaleString()}</span>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'center' }}>
+        <span style={{ fontSize: '16px', color: '#ef4444', fontWeight: 'bold' }}>Discount (Rs):</span>
+        <input type="number" placeholder="0" value={discount || ''} onChange={(e) => setDiscount(Number(e.target.value))} style={{ width: '100px', padding: '8px 12px', borderRadius: '8px', border: '2px solid #cbd5e1', fontSize: '16px', textAlign: 'right', fontWeight: 'bold', color: '#000' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderTop: '2px dashed #e2e8f0', paddingTop: '15px' }}>
+        <span style={{ fontSize: '24px', fontWeight: '900', color: '#10b981' }}>Payable:</span>
+        <span style={{ fontSize: '24px', fontWeight: '900', color: '#10b981' }}>Rs. {finalAmount.toLocaleString()}</span>
       </div>
 
-      <h2 style={styles.amount}>Payable: Rs. {finalAmount.toLocaleString()}</h2>
-      
-      <button onClick={onCheckout} style={styles.payBtn}>💵 Pay & Print</button>
-
-      <div style={styles.actionRow}>
-        <button onClick={onHold} style={styles.holdBtn}>⏸️ Hold</button>
-        {isHeld && <button onClick={onResume} style={styles.resumeBtn}>▶️ Resume</button>}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '15px' }}>
+        {!isHeld ? (
+          <button onClick={onHold} disabled={isCartEmpty} style={{ flex: '1 1 45%', padding: '12px', backgroundColor: isCartEmpty ? '#e2e8f0' : '#f59e0b', color: isCartEmpty ? '#94a3b8' : 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: isCartEmpty ? 'not-allowed' : 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>⏸️ Hold</button>
+        ) : (
+          <button onClick={onResume} style={{ flex: '1 1 45%', padding: '12px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px' }}>▶️ Resume</button>
+        )}
+        <button onClick={() => setShowUdhaarModal(true)} disabled={isCartEmpty} style={{ flex: '1 1 45%', padding: '12px', backgroundColor: isCartEmpty ? '#e2e8f0' : '#ef4444', color: isCartEmpty ? '#94a3b8' : 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: isCartEmpty ? 'not-allowed' : 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>📓 Udhaar Khata</button>
       </div>
+
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <button onClick={() => onCheckout('Cash')} disabled={isCartEmpty} style={{ flex: '1 1 100%', padding: '15px', backgroundColor: isCartEmpty ? '#e2e8f0' : '#10b981', color: isCartEmpty ? '#94a3b8' : 'white', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: isCartEmpty ? 'not-allowed' : 'pointer', fontSize: '18px', transition: 'all 0.2s' }}>
+          💵 Cash Pay & Print
+        </button>
+        <button onClick={() => onCheckout('Mobile Wallet')} disabled={isCartEmpty} style={{ flex: '1 1 45%', padding: '12px', backgroundColor: isCartEmpty ? '#e2e8f0' : '#8b5cf6', color: isCartEmpty ? '#94a3b8' : 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: isCartEmpty ? 'not-allowed' : 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>
+          📱 JazzCash / EasyPaisa
+        </button>
+        <button onClick={() => onCheckout('Card')} disabled={isCartEmpty} style={{ flex: '1 1 45%', padding: '12px', backgroundColor: isCartEmpty ? '#e2e8f0' : '#3b82f6', color: isCartEmpty ? '#94a3b8' : 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: isCartEmpty ? 'not-allowed' : 'pointer', fontSize: '14px', transition: 'all 0.2s' }}>
+          💳 Bank Card
+        </button>
+      </div>
+
+      {showUdhaarModal && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(255,255,255,0.95)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', borderRadius: '12px', zIndex: 10, border: '2px solid #ef4444', padding: '20px' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: '#0f172a' }}>📓 Kis Ke Khate Mein Likhna Hai?</h3>
+          <select value={selectedCustomerId} onChange={(e) => setSelectedCustomerId(e.target.value)} style={{ width: '100%', padding: '12px', marginBottom: '20px', borderRadius: '8px', border: '2px solid #cbd5e1', fontSize: '16px', color: '#000', fontWeight: 'bold' }}>
+            <option value="">-- Customer Select Karein --</option>
+            {customers.map(c => <option key={c.id} value={c.id}>{c.name} (Pichla Baqaya: Rs. {c.balance})</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+            <button onClick={handleUdhaarSubmit} style={{ flex: 1, padding: '12px', background: '#ef4444', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '16px' }}>✅ Khate Mein Likhain</button>
+            <button onClick={() => setShowUdhaarModal(false)} style={{ flex: 1, padding: '12px', background: '#64748b', color: 'white', borderRadius: '8px', fontWeight: 'bold', border: 'none', cursor: 'pointer', fontSize: '16px' }}>❌ Cancel</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
