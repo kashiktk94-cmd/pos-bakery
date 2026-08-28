@@ -112,22 +112,28 @@ function MainPOS() {
   }
 
   return (
-    <div className={darkMode ? 'dark-theme' : 'light-theme'} style={{ height: '100vh', width: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div className={`app-container ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       <style>{`
         * { box-sizing: border-box; }
         html, body, #root { width: 100%; height: 100vh; margin: 0; padding: 0; overflow: hidden; }
+        
+        .app-container { height: 100vh; width: 100%; overflow: hidden; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; }
+        .workspace-wrapper { flex-grow: 1; min-height: 0; overflow: hidden; width: 100%; padding: 10px; }
+        
         .light-theme { background-color: #f1f5f9; color: #0f172a; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; --header-gradient: linear-gradient(90deg, #ffffff, #f8fafc); }
         .dark-theme { background-color: #0b1120; color: #f8fafc; --card-bg: #1e293b; --border-color: #334155; --text-main: #f8fafc; --text-muted: #94a3b8; --header-gradient: linear-gradient(90deg, #1e293b, #0f172a); }
         ::-webkit-scrollbar { width: 5px; height: 5px; } ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 10px; } ::-webkit-scrollbar:horizontal { display: none !important; height: 0 !important; }
         
         .sharp-heading { font-weight: 900; font-size: 20px; letter-spacing: -0.5px; color: var(--text-main); text-shadow: 0px 1px 2px rgba(0,0,0,0.1); margin: 0; display: flex; align-items: center; gap: 10px; }
-        .smart-header { display: flex; justify-content: space-between; align-items: center; background: var(--header-gradient); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border-color); flex-shrink: 0; }
+        .smart-header { display: flex; justify-content: space-between; align-items: center; background: var(--header-gradient); padding: 12px 15px; border-radius: 12px; border: 1px solid var(--border-color); flex-shrink: 0; margin: 10px; }
         .header-actions { display: flex; align-items: center; gap: 10px; }
         
         .pos-workspace { display: grid; grid-template-columns: 1fr 450px; gap: 15px; height: 100%; min-height: 0; }
-        .left-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; } .right-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; width: 100%; }
+        .left-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; } 
+        .right-col { display: flex; flex-direction: column; gap: 12px; min-height: 0; height: 100%; width: 100%; }
         .themed-panel { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
         .scrollable-content { flex-grow: 1; overflow-y: auto; overflow-x: hidden !important; min-height: 0; } .fixed-panel { flex-shrink: 0; }
+        
         .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; padding: 5px 0; }
         .quick-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; user-select: none; }
         .quick-card:active { transform: scale(0.95); } .item-icon { font-size: 24px; } .item-name { font-size: 12px; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.2; word-wrap: break-word; } .item-price { font-size: 11px; color: #10b981; font-weight: 800; background-color: rgba(16, 185, 129, 0.1); padding: 3px 6px; border-radius: 6px; width: 100%; text-align: center; }
@@ -135,16 +141,20 @@ function MainPOS() {
 
         /* 📱 ULTRA RESPONSIVE ANDROID VIEW */
         @media (max-width: 900px) {
-          html, body, #root { overflow-y: auto !important; height: auto !important; }
-          .smart-header { flex-direction: column; gap: 10px; align-items: stretch; }
+          html, body, #root { height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden !important; }
+          .app-container { height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden !important; display: block; }
+          .workspace-wrapper { height: auto !important; overflow: visible !important; }
+          
+          .smart-header { flex-direction: column; gap: 10px; align-items: stretch; margin: 10px 10px 0 10px; }
           .header-actions { flex-direction: column; width: 100%; }
           .header-actions > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 8px; }
           .btn-modern { width: 100%; text-align: center; padding: 10px; }
-          .pos-workspace { grid-template-columns: 1fr; display: flex; flex-direction: column; height: auto; gap: 10px; }
-          .left-col { height: auto; min-height: 350px; }
-          .right-col { width: 100%; height: auto; min-height: auto; max-width: 100%; }
-          .scrollable-content { overflow: visible; }
-          .quick-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+          
+          .pos-workspace { display: flex; flex-direction: column; height: auto !important; gap: 10px; }
+          .left-col, .right-col { height: auto !important; min-height: unset !important; overflow: visible !important; display: block; }
+          .scrollable-content { overflow: visible !important; height: auto !important; flex-grow: 0; }
+          
+          .quick-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
         }
         @media print { .hide-on-print { display: none !important; } }
       `}</style>
@@ -158,14 +168,14 @@ function MainPOS() {
             </div>
             <input type="text" placeholder="Naam ya barcode..." value={inquirySearch} onChange={e => setInquirySearch(e.target.value)} autoFocus style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '8px', border: '2px solid #3b82f6', marginBottom: '15px', outline: 'none', background: 'var(--card-bg)', color: 'var(--text-main)' }} />
             <div style={{ overflowY: 'auto', flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'auto' }}>
-              <table style={{ width: '100%', minWidth: '350px' }}>
-                <thead><tr><th style={{padding:'10px', textAlign:'left'}}>Item Name</th><th style={{padding:'10px', textAlign:'left'}}>Price</th><th style={{padding:'10px', textAlign:'left'}}>Stock</th></tr></thead>
+              <table style={{ width: '100%', minWidth: '350px', borderCollapse: 'collapse' }}>
+                <thead><tr><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Item Name</th><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Price</th><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Stock</th></tr></thead>
                 <tbody>
                   {filteredInquiry.map(p => (
                     <tr key={p.id}>
-                      <td style={{fontWeight:'bold', padding:'10px', color:'var(--text-main)'}}>{p.product_name || p.name || "Unknown"}</td>
-                      <td style={{fontWeight:'bold', color:'#10b981', padding:'10px'}}>Rs. {p.price}</td>
-                      <td style={{fontWeight:'bold', color: p.quantity<1?'#ef4444':'var(--text-main)', padding:'10px'}}>{p.quantity > 0 ? p.quantity : 'Khatam'}</td>
+                      <td style={{fontWeight:'bold', padding:'10px', color:'var(--text-main)', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>{p.product_name || p.name || "Unknown"}</td>
+                      <td style={{fontWeight:'bold', color:'#10b981', padding:'10px', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>Rs. {p.price}</td>
+                      <td style={{fontWeight:'bold', color: p.quantity<1?'#ef4444':'var(--text-main)', padding:'10px', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>{p.quantity > 0 ? p.quantity : 'Khatam'}</td>
                     </tr>
                   ))}
                   {filteredInquiry.length === 0 && <tr><td colSpan="3" style={{textAlign:'center', padding:'20px', color:'var(--text-muted)'}}>Nahi mila.</td></tr>}
@@ -178,59 +188,57 @@ function MainPOS() {
 
       {toast.show && ( <div style={{ position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)', padding: '10px 20px', background: toast.type === 'error' ? '#ef4444' : '#10b981', color: 'white', borderRadius: '8px', fontWeight: 'bold', zIndex: 10000, fontSize: '13px' }}>{toast.message}</div> )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '10px', fontFamily: "'Inter', sans-serif", width: '100%' }} className="hide-on-print">
-        <div className="smart-header" style={{ marginBottom: '10px' }}>
-          <h1 className="sharp-heading">🏪 Kashif Bakery POS</h1>
-          <div className="header-actions">
-            <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Session: <span style={{color: '#3b82f6'}}>{userRole === 'admin' ? '👑 Malik' : '👦 Cashier'}</span></span>
-            <div>
-              <button className="btn-modern" onClick={() => setDarkMode(!darkMode)} style={{ background: 'rgba(148, 163, 184, 0.1)', color: 'var(--text-main)' }}>{darkMode ? '☀️ Mode' : '🌙 Mode'}</button>
-              <button className="btn-modern" onClick={() => setShowInquiry(true)} style={{ backgroundColor: '#8b5cf6', color: 'white' }}>🔍 Search</button>
-              <button className="btn-modern" onClick={handleLedgerToggle} style={{ backgroundColor: showLedger ? '#f59e0b' : '#10b981', color: 'white' }}>{showLedger ? '⬅️ POS' : '📓 Ledger'}</button>
-              <button className="btn-modern" onClick={handleAdminToggle} style={{ backgroundColor: isModeAdmin ? '#ef4444' : '#0f172a', color: 'white' }}>{isModeAdmin ? '⬅️ POS' : '⚙️ Admin'}</button>
-              <button className="btn-modern" onClick={handleLogout} style={{ background: '#ef4444', color: 'white', gridColumn: '1 / -1' }}>🔒 Lock</button>
-            </div>
+      <div className="smart-header hide-on-print">
+        <h1 className="sharp-heading">🏪 Kashif Bakery POS</h1>
+        <div className="header-actions">
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Session: <span style={{color: '#3b82f6'}}>{userRole === 'admin' ? '👑 Malik' : '👦 Cashier'}</span></span>
+          <div>
+            <button className="btn-modern" onClick={() => setDarkMode(!darkMode)} style={{ background: 'rgba(148, 163, 184, 0.1)', color: 'var(--text-main)' }}>{darkMode ? '☀️ Mode' : '🌙 Mode'}</button>
+            <button className="btn-modern" onClick={() => setShowInquiry(true)} style={{ backgroundColor: '#8b5cf6', color: 'white' }}>🔍 Search</button>
+            <button className="btn-modern" onClick={handleLedgerToggle} style={{ backgroundColor: showLedger ? '#f59e0b' : '#10b981', color: 'white' }}>{showLedger ? '⬅️ POS' : '📓 Ledger'}</button>
+            <button className="btn-modern" onClick={handleAdminToggle} style={{ backgroundColor: isModeAdmin ? '#ef4444' : '#0f172a', color: 'white' }}>{isModeAdmin ? '⬅️ POS' : '⚙️ Admin'}</button>
+            <button className="btn-modern" onClick={handleLogout} style={{ background: '#ef4444', color: 'white', gridColumn: '1 / -1' }}>🔒 Lock</button>
           </div>
         </div>
+      </div>
 
-        <div style={{ flexGrow: 1, minHeight: 0, overflow: 'hidden', width: '100%' }}>
-          {isModeAdmin ? ( <div style={{ height: '100%', overflowY: 'auto' }}><AdminDashboard /></div> ) : showLedger ? ( <div style={{ height: '100%', overflowY: 'auto' }}><LedgerPanel /></div> ) : (
-            <div className="pos-workspace">
-              <div className="left-col">
-                <div className="fixed-panel"><DailySalesReport refreshTrigger={safeCart.length} /></div>
-                <div className="themed-panel fixed-panel" style={{ padding: '10px 15px' }}><ScannerInput onScan={(id) => { playBeep(); handleScan(id); }} dbProducts={safeDbProducts} cart={safeCart} /></div>
-                <div className="themed-panel" style={{ flexGrow: 1, padding: '10px 15px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
-                    <h3 className="sharp-heading" style={{fontSize: '15px'}}>👆 Quick Touch Menu</h3>
-                  </div>
-                  <div className="scrollable-content">
-                    <div className="quick-grid">
-                      {safeDbProducts.map(product => {
-                        if(!product) return null;
-                        const isExpiring = product.expiry_date && new Date(product.expiry_date) <= new Date(new Date().setDate(new Date().getDate() + 3));
-                        return (
-                          <button key={product.id} onClick={() => handleTouchItem(product.id)} className="quick-card" style={{ borderColor: isExpiring ? '#fca5a5' : 'var(--border-color)' }}>
-                            <span className="item-icon">{product.category === 'Food' ? '🍔' : '📦'}</span>
-                            <span className="item-name">{product.product_name || product.name || "Unknown"}</span>
-                            <span className="item-price">Rs. {product.price || 0}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
+      <div className="workspace-wrapper hide-on-print">
+        {isModeAdmin ? ( <div style={{ height: '100%', overflowY: 'auto' }}><AdminDashboard /></div> ) : showLedger ? ( <div style={{ height: '100%', overflowY: 'auto' }}><LedgerPanel /></div> ) : (
+          <div className="pos-workspace">
+            <div className="left-col">
+              <div className="fixed-panel"><DailySalesReport refreshTrigger={safeCart.length} /></div>
+              <div className="themed-panel fixed-panel" style={{ padding: '10px 15px' }}><ScannerInput onScan={(id) => { playBeep(); handleScan(id); }} dbProducts={safeDbProducts} cart={safeCart} /></div>
+              <div className="themed-panel" style={{ flexGrow: 1, padding: '10px 15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
+                  <h3 className="sharp-heading" style={{fontSize: '15px'}}>👆 Quick Touch Menu</h3>
                 </div>
-              </div>
-              <div className="right-col">
-                <div className="themed-panel" style={{ padding: 0, flexGrow: 1, overflow: 'hidden' }}>
-                  <div className="scrollable-content" style={{ padding: 0 }}><CartTable cart={safeCart} totalAmount={safeTotalAmount} updateQuantity={updateQuantity} removeItem={removeItem} /></div>
-                </div>
-                <div className="themed-panel fixed-panel" style={{ padding: 0, borderTop: '4px solid #10b981' }}>
-                  <CheckoutPanel totalAmount={safeTotalAmount} finalAmount={safeFinalAmount} discount={discount} setDiscount={setDiscount} onCheckout={() => { handleCheckout(); showToast("Bill Generated!", "success"); }} onCreditCheckout={handleCreditCheckout} customers={safeCustomers} onHold={handleHold} onResume={handleResume} isHeld={heldCart !== null} />
+                <div className="scrollable-content">
+                  <div className="quick-grid">
+                    {safeDbProducts.map(product => {
+                      if(!product) return null;
+                      const isExpiring = product.expiry_date && new Date(product.expiry_date) <= new Date(new Date().setDate(new Date().getDate() + 3));
+                      return (
+                        <button key={product.id} onClick={() => handleTouchItem(product.id)} className="quick-card" style={{ borderColor: isExpiring ? '#fca5a5' : 'var(--border-color)' }}>
+                          <span className="item-icon">{product.category === 'Food' ? '🍔' : '📦'}</span>
+                          <span className="item-name">{product.product_name || product.name || "Unknown"}</span>
+                          <span className="item-price">Rs. {product.price || 0}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-        </div>
+            <div className="right-col">
+              <div className="themed-panel" style={{ padding: 0, flexGrow: 1, overflow: 'hidden' }}>
+                <div className="scrollable-content" style={{ padding: 0 }}><CartTable cart={safeCart} totalAmount={safeTotalAmount} updateQuantity={updateQuantity} removeItem={removeItem} /></div>
+              </div>
+              <div className="themed-panel fixed-panel" style={{ padding: 0, borderTop: '4px solid #10b981' }}>
+                <CheckoutPanel totalAmount={safeTotalAmount} finalAmount={safeFinalAmount} discount={discount} setDiscount={setDiscount} onCheckout={() => { handleCheckout(); showToast("Bill Generated!", "success"); }} onCreditCheckout={handleCreditCheckout} customers={safeCustomers} onHold={handleHold} onResume={handleResume} isHeld={heldCart !== null} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {receiptData && (
@@ -244,8 +252,8 @@ function MainPOS() {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '16px', fontWeight: '900' }}><span>Total Paid</span><span>Rs. {(receiptData.total || 0).toLocaleString()}</span></div>
             </div>
             <div className="hide-on-print" style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-              <button className="btn-modern" onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', padding: '12px' }}>🖨️ Print</button>
-              <button className="btn-modern" onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', padding: '12px' }}>❌ Close</button>
+              <button className="btn-modern" onClick={() => window.print()} style={{ flex: 1, backgroundColor: '#3b82f6', color: 'white', padding: '12px', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>🖨️ Print</button>
+              <button className="btn-modern" onClick={closeReceipt} style={{ flex: 1, backgroundColor: '#ef4444', color: 'white', padding: '12px', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>❌ Close</button>
             </div>
           </div>
         </div>
