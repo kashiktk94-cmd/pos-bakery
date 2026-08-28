@@ -3,6 +3,7 @@ import { SUPABASE_URL, headers } from '../config/supabase';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  
   const [inventory, setInventory] = useState([]);
   const [sales, setSales] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -12,9 +13,10 @@ export default function AdminDashboard() {
   const [newPrice, setNewPrice] = useState('');
   const [newQty, setNewQty] = useState('');
   const [newShelf, setNewShelf] = useState('');
-  
-  // 🌟 NAYA: Edit Mode ke liye State
   const [editingId, setEditingId] = useState(null);
+
+  // 🌟 NAYA: Proper Sale Edit Modal State
+  const [editingSale, setEditingSale] = useState(null);
   
   const barcodeRef = useRef(null);
   const nameRef = useRef(null);
@@ -30,7 +32,9 @@ export default function AdminDashboard() {
 
   const handleKeyDown = (e, nextRef) => { if (e.key === 'Enter') { e.preventDefault(); if (nextRef && nextRef.current) nextRef.current.focus(); } };
 
-  // 🌟 UPDATE: Save & Edit dono ka function
+  // ==========================================
+  // 📦 INVENTORY LOGIC
+  // ==========================================
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (!newName || !newPrice || !newQty) return alert('⚠️ Naam, Price, aur Stock zaroori hai!');
@@ -40,46 +44,81 @@ export default function AdminDashboard() {
     try {
       let res;
       if (editingId) {
-        // Agar Edit ho raha hai toh PATCH karein
         res = await fetch(`${SUPABASE_URL}/rest/v1/inventory?id=eq.${editingId}`, { method: 'PATCH', headers, body: JSON.stringify(payload) });
       } else {
-        // Naya hai toh POST karein
         res = await fetch(`${SUPABASE_URL}/rest/v1/inventory`, { method: 'POST', headers, body: JSON.stringify(payload) });
       }
-
-      if (res.ok) { 
-        handleCancelEdit(); 
-        fetchInventory(); 
-        if (barcodeRef.current) barcodeRef.current.focus(); 
-      } 
+      if (res.ok) { handleCancelEdit(); fetchInventory(); if (barcodeRef.current) barcodeRef.current.focus(); } 
     } catch (err) {}
   };
 
   const handleEditClick = (item) => {
-    setEditingId(item.id);
-    setNewBarcode(item.barcode || '');
-    setNewName(item.product_name || item.name || '');
-    setNewPrice(item.price || '');
-    setNewQty(item.quantity || '');
-    setNewShelf(item.category && item.category !== 'General' ? item.category : '');
+    setEditingId(item.id); setNewBarcode(item.barcode || ''); setNewName(item.product_name || item.name || ''); setNewPrice(item.price || ''); setNewQty(item.quantity || ''); setNewShelf(item.category && item.category !== 'General' ? item.category : '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setNewBarcode(''); setNewName(''); setNewPrice(''); setNewQty(''); setNewShelf('');
-  };
+  const handleCancelEdit = () => { setEditingId(null); setNewBarcode(''); setNewName(''); setNewPrice(''); setNewQty(''); setNewShelf(''); };
 
   const handleDeleteItem = async (id) => {
     if(!window.confirm("⚠️ Kya aap is item ko hamesha ke liye GODAM se DELETE karna chahte hain?")) return;
     try { const res = await fetch(`${SUPABASE_URL}/rest/v1/inventory?id=eq.${id}`, { method: 'DELETE', headers }); if(res.ok) fetchInventory(); } catch(err) {}
   };
-
   const handleDeleteAllItems = async () => {
     if(!window.confirm("🚨 WARNING: Kya aap GODAM KA SARA SAMAAN delete karna chahte hain? Yeh wapas nahi aayega!")) return;
     const pass = window.prompt("Security Lock: Confirm karne ke liye Admin PIN (1234) darj karein:");
     if(pass !== "1234") return alert("❌ Ghalat PIN!");
     try { const res = await fetch(`${SUPABASE_URL}/rest/v1/inventory?id=not.is.null`, { method: 'DELETE', headers }); if(res.ok) { fetchInventory(); alert("✅ Godam poori tarah khali kar diya gaya hai!"); } } catch(err) {}
+  };
+
+  const downloadInventoryExcel = () => {
+    let csv = "Code,Name,Shelf No,Price,Stock\n";
+    inventory.forEach(item => { csv += `"${item.barcode || item.id}","${item.product_name || item.name}","${item.category || ''}",${item.price},${item.quantity}\n`; });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Godam_Stock_${new Date().toLocaleDateString('en-PK')}.csv`; link.click();
+  };
+  const handlePrintInventoryPDF = () => {
+    const printWindow = window.open('', '_blank');
+    let html = `<html><head><title>Godam Stock Report</title><style>body { font-family: sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #ddd; padding: 10px; text-align: left; } th { background-color: #f4f4f5; }</style></head><body><h2>📦 Godam Stock Report</h2><p>Date: ${new Date().toLocaleDateString('en-PK')}</p><table><tr><th>Code</th><th>Name</th><th>Shelf No</th><th>Price</th><th>Stock</th></tr>`;
+    inventory.forEach(item => { html += `<tr><td>${item.barcode || item.id}</td><td>${item.product_name || item.name}</td><td>${item.category || '-'}</td><td>Rs. ${item.price}</td><td style="color: ${item.quantity < 5 ? 'red' : 'green'}; font-weight: bold;">${item.quantity}</td></tr>`; });
+    html += `</table></body></html>`; printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
+  };
+
+  // ==========================================
+  // 💰 SALES LOGIC (EDIT & EXPORT)
+  // ==========================================
+  const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+  const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+  // 🌟 NAYA: Proper Sale Edit Handlers
+  const handleEditSaleClick = (sale) => {
+    let parsed = typeof sale.details === 'string' ? JSON.parse(sale.details) : sale.details;
+    setEditingSale({ ...sale, parsedDetails: parsed || [] });
+  };
+  
+  const handleSaleItemQtyChange = (itemId, newQty) => {
+    if (!editingSale || newQty < 1) return;
+    const updatedDetails = editingSale.parsedDetails.map(item => 
+      item.id === itemId ? { ...item, qty: newQty } : item
+    );
+    setEditingSale({ ...editingSale, parsedDetails: updatedDetails });
+  };
+
+  const handleSaveSaleEdit = async () => {
+    if(!editingSale) return;
+    
+    // Naya total items ki base par khud calculate hoga
+    const newTotal = editingSale.parsedDetails.reduce((sum, item) => sum + ((item.price || 0) * item.qty), 0);
+    
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/sales?id=eq.${editingSale.id}`, {
+        method: 'PATCH', headers, 
+        body: JSON.stringify({ 
+          total_amount: newTotal, 
+          payment_method: editingSale.payment_method,
+          details: editingSale.parsedDetails 
+        })
+      });
+      if(res.ok) { setEditingSale(null); fetchSales(); }
+    } catch(err) { console.error(err); alert("Network Error"); }
   };
 
   const handleDeleteSale = async (id) => {
@@ -97,37 +136,93 @@ export default function AdminDashboard() {
     printWindow.document.write(html); printWindow.document.close(); setTimeout(() => printWindow.print(), 500);
   };
 
-  const totalSalesAmount = sales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const downloadSalesExcel = () => {
+    let csv = "Bill No,Date,Payment Method,Total Amount\n";
+    sales.forEach(s => { csv += `"${s.id}","${new Date(s.created_at).toLocaleString('en-PK')}","${s.payment_method || 'Cash'}",${s.total_amount}\n`; });
+    csv += `\n,,GRAND TOTAL:,${totalSalesAmount}\n`;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Sales_Report_${new Date().toLocaleDateString('en-PK')}.csv`; link.click();
+  };
+  
+  const handlePrintSalesPDF = () => {
+    const printWindow = window.open('', '_blank');
+    let html = `<html><head><title>Sales Report</title><style>body { font-family: sans-serif; padding: 20px; } table { width: 100%; border-collapse: collapse; margin-top: 20px; } th, td { border: 1px solid #ddd; padding: 10px; text-align: left; } th { background-color: #f4f4f5; }</style></head><body><h2>💰 Sales Report</h2><p>Date: ${new Date().toLocaleDateString('en-PK')}</p><table><tr><th>Bill No</th><th>Date</th><th>Payment Method</th><th>Total</th></tr>`;
+    sales.forEach(s => { html += `<tr><td>#${s.id}</td><td>${new Date(s.created_at).toLocaleString('en-PK')}</td><td>${s.payment_method || 'Cash'}</td><td style="color: #10b981; font-weight: bold;">Rs. ${s.total_amount.toLocaleString()}</td></tr>`; });
+    html += `<tr><td colspan="3" style="text-align:right; font-weight:bold;">Grand Total:</td><td style="color: #10b981; font-weight: 900; font-size: 18px;">Rs. ${totalSalesAmount.toLocaleString()}</td></tr>`;
+    html += `</table></body></html>`; printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
+  };
 
   return (
     <div className="admin-wrapper">
       <style>{`
         .admin-wrapper { display: flex; flex-direction: row; min-height: 86vh; background-color: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); width: 100%; font-family: 'Inter', sans-serif; }
         .admin-sidebar { width: 220px; background-color: #0f172a; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
-        .admin-content { flex: 1; padding: 25px; overflow-y: auto; max-height: 86vh; width: 100%; background: var(--card-bg); }
-        .nav-btn { background: transparent; color: #94a3b8; border: none; text-align: left; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 5px; }
+        .admin-content { flex: 1; padding: 25px; overflow-y: auto; max-height: 86vh; width: 100%; background: var(--card-bg); position: relative; }
+        .nav-btn { background: transparent; color: #94a3b8; border: none; text-align: left; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; }
         .nav-btn.active { background: #3b82f6; color: #fff; }
         .admin-card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; }
         .admin-input { width: 100%; padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; background: transparent; color: var(--text-main); }
         .admin-btn { padding: 10px 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-        table { width: 100%; border-collapse: collapse; } th { background: rgba(148,163,184,0.1); padding: 10px; text-align: left; color: var(--text-muted); font-size: 12px; text-transform: uppercase;} td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; }
+        .table-responsive { overflow-x: auto; width: 100%; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; } th { background: rgba(148,163,184,0.1); padding: 10px; text-align: left; color: var(--text-muted); font-size: 12px; text-transform: uppercase;} td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 14px; }
         
-        /* 🌟 NAYA: HD Sharp Headings CSS */
-        .modern-title {
-          font-weight: 900;
-          font-size: 22px;
-          letter-spacing: -0.5px;
-          color: var(--text-main);
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-          text-shadow: 0px 1px 2px rgba(0,0,0,0.1);
-          margin-bottom: 20px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
+        .modern-title { font-weight: 900; font-size: 22px; letter-spacing: -0.5px; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .dashboard-stats { display: flex; gap: 20px; }
+
+        @media (max-width: 768px) {
+          .admin-wrapper { flex-direction: column; }
+          .admin-sidebar { width: 100%; flex-direction: row; padding: 10px; overflow-x: auto; }
+          .admin-sidebar h2 { display: none; }
+          .nav-btn { margin-bottom: 0; margin-right: 10px; flex: 0 0 auto; }
+          .form-grid { grid-template-columns: 1fr; }
+          .dashboard-stats { flex-direction: column; }
+          .admin-content { padding: 15px; }
         }
       `}</style>
+
+      {/* 🌟 EDIT BILL MODAL */}
+      {editingSale && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '500px', border: '1px solid var(--border-color)' }}>
+            <h3 className="modern-title" style={{marginBottom: '15px'}}>✏️ Edit Bill #{editingSale.id}</h3>
+            <p style={{fontSize: '12px', color: '#ef4444', marginBottom: '15px'}}>Note: Yahan change karne se sirf Bill/Receipt update hogi. Godam ka stock aap ko manually theek karna paray ga.</p>
+            
+            <div style={{maxHeight: '300px', overflowY: 'auto', marginBottom: '15px', border: '1px solid var(--border-color)', padding: '10px', borderRadius: '8px'}}>
+              {editingSale.parsedDetails.map(item => (
+                <div key={item.id} style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px dashed var(--border-color)'}}>
+                  <div>
+                    <div style={{fontWeight: 'bold'}}>{item.product_name || item.name}</div>
+                    <div style={{fontSize: '12px', color: '#10b981'}}>Rs. {item.price} each</div>
+                  </div>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <button onClick={() => handleSaleItemQtyChange(item.id, item.qty - 1)} style={{padding: '5px 10px', fontWeight: 'bold'}}>-</button>
+                    <span style={{fontWeight: 'bold'}}>{item.qty}</span>
+                    <button onClick={() => handleSaleItemQtyChange(item.id, item.qty + 1)} style={{padding: '5px 10px', fontWeight: 'bold'}}>+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '15px'}}>
+              <span style={{fontWeight: 'bold'}}>Payment Method:</span>
+              <select value={editingSale.payment_method} onChange={e => setEditingSale({...editingSale, payment_method: e.target.value})} style={{padding: '5px', borderRadius: '4px'}}>
+                <option value="Cash">Cash</option><option value="Mobile Wallet">Mobile Wallet</option><option value="Card">Card</option><option value="Udhaar">Udhaar</option>
+              </select>
+            </div>
+            
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '20px', fontSize: '18px'}}>
+              <span style={{fontWeight: 'bold'}}>Naya Total:</span>
+              <span style={{fontWeight: '900', color: '#10b981'}}>Rs. {editingSale.parsedDetails.reduce((sum, item) => sum + ((item.price || 0) * item.qty), 0)}</span>
+            </div>
+            
+            <div style={{display: 'flex', gap: '10px'}}>
+              <button onClick={handleSaveSaleEdit} className="admin-btn" style={{background: '#10b981', flex: 1}}>💾 Save & Update Bill</button>
+              <button onClick={() => setEditingSale(null)} className="admin-btn" style={{background: '#ef4444', flex: 1}}>❌ Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="admin-sidebar">
         <h2 style={{ color: '#fff', fontSize: '18px', marginBottom: '20px', fontWeight: '900' }}>⚙️ Admin Panel</h2>
@@ -137,11 +232,10 @@ export default function AdminDashboard() {
       </div>
 
       <div className="admin-content">
-        
         {activeTab === 'dashboard' && (
           <div className="admin-card">
             <h2 className="modern-title">📊 Overview Dashboard</h2>
-            <div style={{ display: 'flex', gap: '20px' }}>
+            <div className="dashboard-stats">
               <div style={{ padding: '20px', background: '#ecfdf5', borderRadius: '10px', flex: 1, border: '1px solid #10b981' }}><h3>Total Sales</h3><h2 style={{color: '#047857', fontWeight:'900'}}>Rs. {totalSalesAmount.toLocaleString()}</h2></div>
               <div style={{ padding: '20px', background: '#fef2f2', borderRadius: '10px', flex: 1, border: '1px solid #ef4444' }}><h3>Total Expense</h3><h2 style={{color: '#b91c1c', fontWeight:'900'}}>Rs. {totalExpensesAmount.toLocaleString()}</h2></div>
             </div>
@@ -151,72 +245,84 @@ export default function AdminDashboard() {
         {activeTab === 'inventory' && (
           <div>
             <div className="admin-card" style={{ borderLeft: '4px solid #f59e0b', background: editingId ? '#fffbeb' : 'var(--card-bg)' }}>
-              <h2 className="modern-title" style={{color: editingId ? '#d97706' : 'var(--text-main)'}}>
-                {editingId ? '✏️ Item Update Karein' : '➕ Naya Samaan Dalein'}
-              </h2>
-              <form onSubmit={handleAddItem} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+              <h2 className="modern-title" style={{color: editingId ? '#d97706' : 'var(--text-main)'}}>{editingId ? '✏️ Item Update Karein' : '➕ Naya Samaan Dalein'}</h2>
+              <form onSubmit={handleAddItem} className="form-grid">
                 <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Item Name *</label><input type="text" ref={nameRef} onKeyDown={e => handleKeyDown(e, priceRef)} value={newName} onChange={e => setNewName(e.target.value)} className="admin-input" required /></div>
                 <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Price (Rs) *</label><input type="number" ref={priceRef} onKeyDown={e => handleKeyDown(e, qtyRef)} value={newPrice} onChange={e => setNewPrice(e.target.value)} className="admin-input" required /></div>
                 <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Stock Qty *</label><input type="number" ref={qtyRef} onKeyDown={e => handleKeyDown(e, shelfRef)} value={newQty} onChange={e => setNewQty(e.target.value)} className="admin-input" required /></div>
                 <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Barcode (Optional)</label><input type="text" ref={barcodeRef} onKeyDown={e => handleKeyDown(e, nameRef)} value={newBarcode} onChange={e => setNewBarcode(e.target.value)} className="admin-input" /></div>
                 <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Shelf No / Location</label><input type="text" ref={shelfRef} placeholder="Maslan: Rack 1" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="admin-input" /></div>
-                
                 <div style={{display:'flex', alignItems:'flex-end', gap: '10px'}}>
                   {editingId && <button type="button" onClick={handleCancelEdit} className="admin-btn" style={{background:'#64748b', padding:'12px', flex: 1}}>❌ Cancel</button>}
-                  <button type="submit" className="admin-btn" style={{background: editingId ? '#10b981' : '#f59e0b', padding:'12px', flex: 2}}>
-                    {editingId ? '💾 Update Item' : '💾 Save Item'}
-                  </button>
+                  <button type="submit" className="admin-btn" style={{background: editingId ? '#10b981' : '#f59e0b', padding:'12px', flex: 2}}>{editingId ? '💾 Update Item' : '💾 Save Item'}</button>
                 </div>
               </form>
             </div>
 
             <div className="admin-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
                 <h2 className="modern-title" style={{margin: 0}}>📦 Godam Stock</h2>
-                <button onClick={handleDeleteAllItems} className="admin-btn" style={{background: '#ef4444'}}>🚨 Delete All Stock</button>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button onClick={downloadInventoryExcel} className="admin-btn" style={{background: '#10b981'}}>⬇️ Excel</button>
+                  <button onClick={handlePrintInventoryPDF} className="admin-btn" style={{background: '#3b82f6'}}>🖨️ PDF</button>
+                  <button onClick={handleDeleteAllItems} className="admin-btn" style={{background: '#ef4444'}}>🚨 Delete All Stock</button>
+                </div>
               </div>
-              <table>
-                <thead><tr><th>Code</th><th>Name</th><th>Shelf No</th><th>Price</th><th>Stock</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
-                <tbody>
-                  {inventory.map(item => (
-                    <tr key={item.id} style={{background: editingId === item.id ? '#fef3c7' : 'transparent'}}>
-                      <td style={{fontWeight:'bold'}}>{item.barcode || item.id}</td>
-                      <td style={{fontWeight:'bold'}}>{item.product_name || item.name}</td>
-                      <td style={{color:'#3b82f6', fontWeight:'bold'}}>{item.category || 'N/A'}</td>
-                      <td style={{fontWeight:'bold'}}>Rs. {item.price}</td>
-                      <td style={{fontWeight:'900', color: item.quantity<4?'#ef4444':'#10b981'}}>{item.quantity}</td>
-                      <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
-                        <button onClick={() => handleEditClick(item)} className="admin-btn" style={{background:'#f59e0b', padding:'6px 10px', fontSize:'12px'}}>✏️ Edit</button>
-                        <button onClick={() => handleDeleteItem(item.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️ Del</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="table-responsive">
+                <table>
+                  <thead><tr><th>Code</th><th>Name</th><th>Shelf No</th><th>Price</th><th>Stock</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
+                  <tbody>
+                    {inventory.map(item => (
+                      <tr key={item.id} style={{background: editingId === item.id ? '#fef3c7' : 'transparent'}}>
+                        <td style={{fontWeight:'bold'}}>{item.barcode || item.id}</td>
+                        <td style={{fontWeight:'bold'}}>{item.product_name || item.name}</td>
+                        <td style={{color:'#3b82f6', fontWeight:'bold'}}>{item.category || 'N/A'}</td>
+                        <td style={{fontWeight:'bold'}}>Rs. {item.price}</td>
+                        <td style={{fontWeight:'900', color: item.quantity<4?'#ef4444':'#10b981'}}>{item.quantity}</td>
+                        <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
+                          <button onClick={() => handleEditClick(item)} className="admin-btn" style={{background:'#f59e0b', padding:'6px 10px', fontSize:'12px'}}>✏️ Edit</button>
+                          <button onClick={() => handleDeleteItem(item.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️ Del</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'sales' && (
           <div className="admin-card">
-            <h2 className="modern-title">💰 Sales Report & Actions</h2>
-            <table>
-              <thead><tr><th>Bill No</th><th>Date</th><th>Total</th><th>Payment</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
-              <tbody>
-                {sales.map(sale => (
-                  <tr key={sale.id}>
-                    <td style={{fontWeight:'bold'}}>#{sale.id}</td>
-                    <td style={{color:'var(--text-muted)'}}>{new Date(sale.created_at).toLocaleString('en-PK')}</td>
-                    <td style={{fontWeight:'900', color:'#10b981'}}>Rs. {sale.total_amount.toLocaleString()}</td>
-                    <td><span style={{background:'rgba(148,163,184,0.1)', padding:'4px 8px', borderRadius:'4px', fontWeight:'bold'}}>{sale.payment_method || 'Cash'}</span></td>
-                    <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
-                      <button onClick={() => handleReprintReceipt(sale)} className="admin-btn" style={{background:'#3b82f6', padding:'6px 10px', fontSize:'12px'}}>🖨️ Reprint</button>
-                      <button onClick={() => handleDeleteSale(sale.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️ Del</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+              <h2 className="modern-title" style={{margin: 0}}>💰 Sales Report</h2>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button onClick={downloadSalesExcel} className="admin-btn" style={{background: '#10b981'}}>⬇️ Excel</button>
+                <button onClick={handlePrintSalesPDF} className="admin-btn" style={{background: '#3b82f6'}}>🖨️ PDF</button>
+              </div>
+            </div>
+            
+            <div className="table-responsive">
+              <table>
+                <thead><tr><th>Bill No</th><th>Date</th><th>Total</th><th>Payment</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
+                <tbody>
+                  {sales.map(sale => (
+                    <tr key={sale.id}>
+                      <td style={{fontWeight:'bold'}}>#{sale.id}</td>
+                      <td style={{color:'var(--text-muted)'}}>{new Date(sale.created_at).toLocaleString('en-PK')}</td>
+                      <td style={{fontWeight:'900', color:'#10b981'}}>Rs. {sale.total_amount.toLocaleString()}</td>
+                      <td><span style={{background:'rgba(148,163,184,0.1)', padding:'4px 8px', borderRadius:'4px', fontWeight:'bold'}}>{sale.payment_method || 'Cash'}</span></td>
+                      <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
+                        <button onClick={() => handleEditSaleClick(sale)} className="admin-btn" style={{background:'#f59e0b', padding:'6px 10px', fontSize:'12px'}}>✏️ Edit</button>
+                        <button onClick={() => handleReprintReceipt(sale)} className="admin-btn" style={{background:'#3b82f6', padding:'6px 10px', fontSize:'12px'}}>🖨️ Reprint</button>
+                        <button onClick={() => handleDeleteSale(sale.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️ Del</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {sales.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding:'20px'}}>Koi sale record nahi mila.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
