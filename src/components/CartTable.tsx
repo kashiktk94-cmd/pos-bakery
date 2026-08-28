@@ -2,42 +2,54 @@ import React from 'react';
 
 export default function CartTable({ cart, totalAmount, updateQuantity, removeItem }) {
   return (
-    <div style={{ backgroundColor: 'transparent', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '20px', width: '100%', overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '320px' }}>
+    <div style={{ backgroundColor: 'transparent', borderRadius: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', marginBottom: '20px', width: '100%' }}>
+      <style>{`
+        .compact-table { width: 100%; border-collapse: collapse; }
+        .compact-table th { padding: 10px 4px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; border-bottom: 2px solid var(--border-color); text-align: left; }
+        .compact-table td { padding: 10px 4px; font-size: 13px; font-weight: bold; color: var(--text-main); border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+        .qty-btn { padding: 4px 8px; background: transparent; border: none; font-weight: bold; font-size: 14px; cursor: pointer; color: var(--text-main); }
+        .qty-val { font-weight: bold; font-size: 13px; min-width: 18px; text-align: center; display: inline-block; color: var(--text-main); }
+        .del-btn { background: #fee2e2; color: #ef4444; border: none; cursor: pointer; fontSize: 12px; padding: 5px 8px; borderRadius: 6px; }
+        
+        /* 📱 ULTRA COMPACT MOBILE VIEW (NO SCROLL) */
+        @media (max-width: 600px) {
+          .compact-table th { padding: 6px 2px !important; font-size: 9px !important; }
+          .compact-table td { padding: 6px 2px !important; font-size: 10px !important; white-space: normal !important; word-wrap: break-word; }
+          .qty-btn { padding: 2px 4px !important; font-size: 11px !important; }
+          .qty-val { font-size: 10px !important; min-width: 12px !important; }
+          .del-btn { padding: 3px 5px !important; font-size: 9px !important; }
+          .item-name-cell { max-width: 80px; } /* Prevent long names from stretching */
+        }
+      `}</style>
+      
+      <table className="compact-table">
         <thead>
-          <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left', color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase' }}>
-            <th style={{ padding: '10px 5px' }}>Item</th>
-            <th style={{ padding: '10px 5px', textAlign: 'center' }}>Qty</th>
-            <th style={{ padding: '10px 5px', textAlign: 'right' }}>Price</th>
-            <th style={{ padding: '10px 5px', textAlign: 'center' }}>Del</th>
+          <tr>
+            <th>Item</th>
+            <th style={{textAlign: 'center'}}>Qty</th>
+            <th style={{textAlign: 'right'}}>Price</th>
+            <th style={{textAlign: 'center'}}>Del</th>
           </tr>
         </thead>
         <tbody>
           {cart.map((item, index) => (
-            <tr key={index} style={{ borderBottom: '1px solid rgba(148, 163, 184, 0.1)', transition: 'background-color 0.2s' }}>
-              <td style={{ padding: '10px 5px', fontWeight: 'bold', color: 'var(--text-main)', fontSize: '13px', maxWidth: '120px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {item.product_name || item.name}
-              </td>
-              
-              <td style={{ padding: '10px 2px', textAlign: 'center' }}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--border-color)', borderRadius: '6px', overflow: 'hidden' }}>
-                  <button onClick={() => updateQuantity(item.id, item.qty - 1)} style={{ padding: '4px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'var(--text-main)' }}>-</button>
-                  <span style={{ fontWeight: 'bold', fontSize: '13px', minWidth: '18px', textAlign: 'center', color: 'var(--text-main)' }}>{item.qty}</span>
-                  <button onClick={() => updateQuantity(item.id, item.qty + 1)} style={{ padding: '4px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', color: 'var(--text-main)' }}>+</button>
+            <tr key={index}>
+              <td className="item-name-cell">{item.product_name || item.name}</td>
+              <td style={{textAlign: 'center'}}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--border-color)', borderRadius: '4px' }}>
+                  <button onClick={() => updateQuantity(item.id, item.qty - 1)} className="qty-btn">-</button>
+                  <span className="qty-val">{item.qty}</span>
+                  <button onClick={() => updateQuantity(item.id, item.qty + 1)} className="qty-btn">+</button>
                 </div>
               </td>
-              
-              <td style={{ padding: '10px 5px', textAlign: 'right', fontWeight: 'bold', color: '#10b981', fontSize: '13px' }}>
-                Rs. {(item.price * item.qty).toLocaleString()}
-              </td>
-              
-              <td style={{ padding: '10px 5px', textAlign: 'center' }}>
-                <button onClick={() => removeItem(item.id)} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '5px 8px', borderRadius: '6px' }} title="Remove">🗑️</button>
+              <td style={{textAlign: 'right', color: '#10b981'}}>Rs. {(item.price * item.qty).toLocaleString()}</td>
+              <td style={{textAlign: 'center'}}>
+                <button onClick={() => removeItem(item.id)} className="del-btn">🗑️</button>
               </td>
             </tr>
           ))}
           {cart.length === 0 && (
-            <tr><td colSpan={4} style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '13px' }}>🛒 Tokri khali hai.</td></tr>
+            <tr><td colSpan={4} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '11px' }}>🛒 Tokri khali hai.</td></tr>
           )}
         </tbody>
       </table>

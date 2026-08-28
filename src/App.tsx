@@ -115,9 +115,9 @@ function MainPOS() {
     <div className={`app-container ${darkMode ? 'dark-theme' : 'light-theme'}`}>
       <style>{`
         * { box-sizing: border-box; }
-        html, body, #root { width: 100%; height: 100vh; margin: 0; padding: 0; overflow: hidden; }
+        html, body, #root { width: 100%; height: 100vh; margin: 0; padding: 0; overflow-x: hidden !important; }
         
-        .app-container { height: 100vh; width: 100%; overflow: hidden; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; }
+        .app-container { height: 100vh; width: 100vw; overflow-x: hidden; display: flex; flex-direction: column; font-family: 'Inter', sans-serif; }
         .workspace-wrapper { flex-grow: 1; min-height: 0; overflow: hidden; width: 100%; padding: 10px; }
         
         .light-theme { background-color: #f1f5f9; color: #0f172a; --card-bg: #ffffff; --border-color: #e2e8f0; --text-main: #0f172a; --text-muted: #64748b; --header-gradient: linear-gradient(90deg, #ffffff, #f8fafc); }
@@ -139,22 +139,27 @@ function MainPOS() {
         .quick-card:active { transform: scale(0.95); } .item-icon { font-size: 24px; } .item-name { font-size: 12px; font-weight: 700; color: var(--text-main); text-align: center; line-height: 1.2; word-wrap: break-word; } .item-price { font-size: 11px; color: #10b981; font-weight: 800; background-color: rgba(16, 185, 129, 0.1); padding: 3px 6px; border-radius: 6px; width: 100%; text-align: center; }
         .btn-modern { font-weight: 700; font-size: 12px; padding: 8px 12px; border-radius: 8px; border: none; cursor: pointer; white-space: nowrap; }
 
-        /* 📱 ULTRA RESPONSIVE ANDROID VIEW */
+        /* 📱 ULTRA RESPONSIVE ANDROID VIEW (NO SCROLL LEFT/RIGHT) */
         @media (max-width: 900px) {
           html, body, #root { height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden !important; }
-          .app-container { height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden !important; display: block; }
-          .workspace-wrapper { height: auto !important; overflow: visible !important; }
+          .app-container { height: auto !important; min-height: 100vh; overflow-y: auto !important; overflow-x: hidden !important; display: block; width: 100vw; max-width: 100%; }
+          .workspace-wrapper { height: auto !important; overflow: hidden !important; width: 100%; padding: 5px; }
           
-          .smart-header { flex-direction: column; gap: 10px; align-items: stretch; margin: 10px 10px 0 10px; }
+          .smart-header { flex-direction: column; gap: 10px; align-items: stretch; margin: 5px 5px 10px 5px; padding: 10px; }
+          .sharp-heading { font-size: 16px; justify-content: center; }
           .header-actions { flex-direction: column; width: 100%; }
-          .header-actions > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 8px; }
-          .btn-modern { width: 100%; text-align: center; padding: 10px; }
+          .header-actions > div { display: grid; grid-template-columns: 1fr 1fr; width: 100%; gap: 6px; }
+          .btn-modern { width: 100%; text-align: center; padding: 8px; font-size: 11px; }
           
-          .pos-workspace { display: flex; flex-direction: column; height: auto !important; gap: 10px; }
-          .left-col, .right-col { height: auto !important; min-height: unset !important; overflow: visible !important; display: block; }
-          .scrollable-content { overflow: visible !important; height: auto !important; flex-grow: 0; }
+          .pos-workspace { display: flex; flex-direction: column; height: auto !important; gap: 10px; width: 100%; }
+          .left-col, .right-col { height: auto !important; min-height: unset !important; overflow: hidden !important; display: block; width: 100%; }
+          .themed-panel { padding: 8px; }
+          .scrollable-content { overflow: hidden !important; height: auto !important; flex-grow: 0; }
           
-          .quick-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+          .quick-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 6px; }
+          .quick-card { padding: 6px; }
+          .item-icon { font-size: 18px; }
+          .item-name { font-size: 10px; }
         }
         @media print { .hide-on-print { display: none !important; } }
       `}</style>
@@ -167,15 +172,15 @@ function MainPOS() {
               <button onClick={() => setShowInquiry(false)} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', fontWeight: 'bold' }}>Close</button>
             </div>
             <input type="text" placeholder="Naam ya barcode..." value={inquirySearch} onChange={e => setInquirySearch(e.target.value)} autoFocus style={{ width: '100%', padding: '12px', fontSize: '14px', borderRadius: '8px', border: '2px solid #3b82f6', marginBottom: '15px', outline: 'none', background: 'var(--card-bg)', color: 'var(--text-main)' }} />
-            <div style={{ overflowY: 'auto', flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'auto' }}>
-              <table style={{ width: '100%', minWidth: '350px', borderCollapse: 'collapse' }}>
-                <thead><tr><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Item Name</th><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Price</th><th style={{padding:'10px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Stock</th></tr></thead>
+            <div style={{ overflowY: 'auto', flexGrow: 1, border: '1px solid var(--border-color)', borderRadius: '8px', overflowX: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                <thead><tr><th style={{padding:'8px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Item Name</th><th style={{padding:'8px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Price</th><th style={{padding:'8px', textAlign:'left', borderBottom:'1px solid var(--border-color)', color:'var(--text-muted)'}}>Stock</th></tr></thead>
                 <tbody>
                   {filteredInquiry.map(p => (
                     <tr key={p.id}>
-                      <td style={{fontWeight:'bold', padding:'10px', color:'var(--text-main)', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>{p.product_name || p.name || "Unknown"}</td>
-                      <td style={{fontWeight:'bold', color:'#10b981', padding:'10px', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>Rs. {p.price}</td>
-                      <td style={{fontWeight:'bold', color: p.quantity<1?'#ef4444':'var(--text-main)', padding:'10px', borderBottom:'1px solid rgba(148,163,184,0.1)'}}>{p.quantity > 0 ? p.quantity : 'Khatam'}</td>
+                      <td style={{fontWeight:'bold', padding:'8px', color:'var(--text-main)', borderBottom:'1px solid rgba(148,163,184,0.1)', fontSize:'12px'}}>{p.product_name || p.name || "Unknown"}</td>
+                      <td style={{fontWeight:'bold', color:'#10b981', padding:'8px', borderBottom:'1px solid rgba(148,163,184,0.1)', fontSize:'12px'}}>Rs. {p.price}</td>
+                      <td style={{fontWeight:'bold', color: p.quantity<1?'#ef4444':'var(--text-main)', padding:'8px', borderBottom:'1px solid rgba(148,163,184,0.1)', fontSize:'12px'}}>{p.quantity > 0 ? p.quantity : 'Khatam'}</td>
                     </tr>
                   ))}
                   {filteredInquiry.length === 0 && <tr><td colSpan="3" style={{textAlign:'center', padding:'20px', color:'var(--text-muted)'}}>Nahi mila.</td></tr>}
@@ -191,7 +196,7 @@ function MainPOS() {
       <div className="smart-header hide-on-print">
         <h1 className="sharp-heading">🏪 Kashif Bakery POS</h1>
         <div className="header-actions">
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)' }}>Session: <span style={{color: '#3b82f6'}}>{userRole === 'admin' ? '👑 Malik' : '👦 Cashier'}</span></span>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-muted)', textAlign: 'center' }}>Session: <span style={{color: '#3b82f6'}}>{userRole === 'admin' ? '👑 Malik' : '👦 Cashier'}</span></span>
           <div>
             <button className="btn-modern" onClick={() => setDarkMode(!darkMode)} style={{ background: 'rgba(148, 163, 184, 0.1)', color: 'var(--text-main)' }}>{darkMode ? '☀️ Mode' : '🌙 Mode'}</button>
             <button className="btn-modern" onClick={() => setShowInquiry(true)} style={{ backgroundColor: '#8b5cf6', color: 'white' }}>🔍 Search</button>
@@ -207,10 +212,10 @@ function MainPOS() {
           <div className="pos-workspace">
             <div className="left-col">
               <div className="fixed-panel"><DailySalesReport refreshTrigger={safeCart.length} /></div>
-              <div className="themed-panel fixed-panel" style={{ padding: '10px 15px' }}><ScannerInput onScan={(id) => { playBeep(); handleScan(id); }} dbProducts={safeDbProducts} cart={safeCart} /></div>
-              <div className="themed-panel" style={{ flexGrow: 1, padding: '10px 15px' }}>
+              <div className="themed-panel fixed-panel" style={{ padding: '8px' }}><ScannerInput onScan={(id) => { playBeep(); handleScan(id); }} dbProducts={safeDbProducts} cart={safeCart} /></div>
+              <div className="themed-panel" style={{ flexGrow: 1, padding: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', paddingBottom: '8px', borderBottom: '1px solid var(--border-color)' }}>
-                  <h3 className="sharp-heading" style={{fontSize: '15px'}}>👆 Quick Touch Menu</h3>
+                  <h3 className="sharp-heading" style={{fontSize: '14px'}}>👆 Quick Touch Menu</h3>
                 </div>
                 <div className="scrollable-content">
                   <div className="quick-grid">

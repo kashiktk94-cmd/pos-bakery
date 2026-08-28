@@ -17,6 +17,9 @@ export default function AdminDashboard() {
 
   const [editingSale, setEditingSale] = useState(null);
   
+  // 🌟 NAYA: Search Bill State
+  const [searchBillId, setSearchBillId] = useState('');
+  
   const barcodeRef = useRef(null);
   const nameRef = useRef(null);
   const priceRef = useRef(null);
@@ -137,6 +140,11 @@ export default function AdminDashboard() {
     html += `</table></body></html>`; printWindow.document.write(html); printWindow.document.close(); setTimeout(() => { printWindow.print(); }, 500);
   };
 
+  // 🌟 NAYA: Filter Sales by Bill ID
+  const filteredSales = sales.filter(sale => 
+    searchBillId ? sale.id.toString() === searchBillId.trim() : true
+  );
+
   return (
     <div className="admin-wrapper">
       <style>{`
@@ -148,22 +156,32 @@ export default function AdminDashboard() {
         .admin-card { background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 20px; width: 100%; overflow: hidden; }
         .admin-input { width: 100%; padding: 10px; border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; background: transparent; color: var(--text-main); }
         .admin-btn { padding: 10px 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; display: inline-flex; align-items: center; justify-content: center; gap: 5px; white-space: nowrap; }
-        .table-responsive { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: collapse; min-width: 550px; } th { background: rgba(148,163,184,0.1); padding: 10px; text-align: left; color: var(--text-muted); font-size: 12px; text-transform: uppercase;} td { padding: 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; }
+        
+        /* 📱 Table CSS changed to allow shrinking instead of scrolling */
+        .table-responsive { overflow: hidden; width: 100%; }
+        table { width: 100%; border-collapse: collapse; table-layout: auto; } 
+        th { background: rgba(148,163,184,0.1); padding: 10px 5px; text-align: left; color: var(--text-muted); font-size: 12px; text-transform: uppercase;} 
+        td { padding: 10px 5px; border-bottom: 1px solid var(--border-color); color: var(--text-main); font-size: 13px; }
         
         .modern-title { font-weight: 900; font-size: 20px; letter-spacing: -0.5px; color: var(--text-main); margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .dashboard-stats { display: flex; gap: 15px; flex-wrap: wrap; }
 
-        /* 📱 ULTRA RESPONSIVE ANDROID VIEW */
+        /* 📱 ULTRA RESPONSIVE ANDROID VIEW (Strictly No Horizontal Scroll) */
         @media (max-width: 900px) {
           .admin-wrapper { flex-direction: column; height: auto; border: none; border-radius: 0; background: transparent; }
-          .admin-sidebar { width: 100%; flex-direction: row; padding: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; margin-bottom: 15px; }
+          .admin-sidebar { width: 100%; flex-direction: row; padding: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 12px; margin-bottom: 10px; }
           .admin-sidebar h2 { display: none; }
-          .nav-btn { margin-bottom: 0; margin-right: 10px; flex: 0 0 auto; text-align: center; }
-          .admin-content { padding: 0; overflow: visible; }
-          .admin-card { padding: 15px; }
+          .nav-btn { margin-bottom: 0; margin-right: 10px; flex: 0 0 auto; text-align: center; padding: 8px 12px; font-size: 11px;}
+          .admin-content { padding: 0; overflow: hidden; width: 100%; }
+          .admin-card { padding: 10px; border-radius: 8px; }
           .dashboard-stats > div { flex: 1 1 100%; }
+          .modern-title { font-size: 16px; margin-bottom: 10px; }
+          
+          /* MAGIC: Shrink tables drastically for mobile */
+          th, td { padding: 6px 2px !important; font-size: 9px !important; word-break: break-word; white-space: normal; }
+          .admin-btn { padding: 6px 8px !important; font-size: 9px !important; }
+          .admin-input { padding: 8px !important; font-size: 11px !important; }
         }
       `}</style>
 
@@ -222,8 +240,8 @@ export default function AdminDashboard() {
           <div className="admin-card">
             <h2 className="modern-title">📊 Overview Dashboard</h2>
             <div className="dashboard-stats">
-              <div style={{ padding: '15px', background: '#ecfdf5', borderRadius: '10px', flex: 1, border: '1px solid #10b981' }}><h3 style={{fontSize:'14px', margin:'0 0 5px 0'}}>Total Sales</h3><h2 style={{color: '#047857', fontWeight:'900', margin:0}}>Rs. {totalSalesAmount.toLocaleString()}</h2></div>
-              <div style={{ padding: '15px', background: '#fef2f2', borderRadius: '10px', flex: 1, border: '1px solid #ef4444' }}><h3 style={{fontSize:'14px', margin:'0 0 5px 0'}}>Total Expense</h3><h2 style={{color: '#b91c1c', fontWeight:'900', margin:0}}>Rs. {totalExpensesAmount.toLocaleString()}</h2></div>
+              <div style={{ padding: '15px', background: '#ecfdf5', borderRadius: '10px', flex: 1, border: '1px solid #10b981' }}><h3 style={{fontSize:'12px', margin:'0 0 5px 0'}}>Total Sales</h3><h2 style={{color: '#047857', fontWeight:'900', margin:0, fontSize:'18px'}}>Rs. {totalSalesAmount.toLocaleString()}</h2></div>
+              <div style={{ padding: '15px', background: '#fef2f2', borderRadius: '10px', flex: 1, border: '1px solid #ef4444' }}><h3 style={{fontSize:'12px', margin:'0 0 5px 0'}}>Total Expense</h3><h2 style={{color: '#b91c1c', fontWeight:'900', margin:0, fontSize:'18px'}}>Rs. {totalExpensesAmount.toLocaleString()}</h2></div>
             </div>
           </div>
         )}
@@ -231,27 +249,27 @@ export default function AdminDashboard() {
         {activeTab === 'inventory' && (
           <div>
             <div className="admin-card" style={{ borderLeft: '4px solid #f59e0b', background: editingId ? '#fffbeb' : 'var(--card-bg)' }}>
-              <h2 className="modern-title" style={{color: editingId ? '#d97706' : 'var(--text-main)'}}>{editingId ? '✏️ Item Update Karein' : '➕ Naya Samaan Dalein'}</h2>
+              <h2 className="modern-title" style={{color: editingId ? '#d97706' : 'var(--text-main)'}}>{editingId ? '✏️ Item Update' : '➕ Naya Samaan'}</h2>
               <form onSubmit={handleAddItem} className="form-grid">
-                <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Item Name *</label><input type="text" ref={nameRef} onKeyDown={e => handleKeyDown(e, priceRef)} value={newName} onChange={e => setNewName(e.target.value)} className="admin-input" required /></div>
-                <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Price (Rs) *</label><input type="number" ref={priceRef} onKeyDown={e => handleKeyDown(e, qtyRef)} value={newPrice} onChange={e => setNewPrice(e.target.value)} className="admin-input" required /></div>
-                <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Stock Qty *</label><input type="number" ref={qtyRef} onKeyDown={e => handleKeyDown(e, shelfRef)} value={newQty} onChange={e => setNewQty(e.target.value)} className="admin-input" required /></div>
-                <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Barcode (Optional)</label><input type="text" ref={barcodeRef} onKeyDown={e => handleKeyDown(e, nameRef)} value={newBarcode} onChange={e => setNewBarcode(e.target.value)} className="admin-input" /></div>
-                <div><label style={{fontSize:'12px', color:'var(--text-muted)', fontWeight:'bold'}}>Shelf No / Location</label><input type="text" ref={shelfRef} placeholder="Maslan: Rack 1" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="admin-input" /></div>
-                <div style={{display:'flex', alignItems:'flex-end', gap: '10px', gridColumn: '1 / -1'}}>
-                  {editingId && <button type="button" onClick={handleCancelEdit} className="admin-btn" style={{background:'#64748b', padding:'12px', flex: 1}}>❌ Cancel</button>}
-                  <button type="submit" className="admin-btn" style={{background: editingId ? '#10b981' : '#f59e0b', padding:'12px', flex: 2}}>{editingId ? '💾 Update Item' : '💾 Save Item'}</button>
+                <div><label style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>Item Name *</label><input type="text" ref={nameRef} onKeyDown={e => handleKeyDown(e, priceRef)} value={newName} onChange={e => setNewName(e.target.value)} className="admin-input" required /></div>
+                <div><label style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>Price (Rs) *</label><input type="number" ref={priceRef} onKeyDown={e => handleKeyDown(e, qtyRef)} value={newPrice} onChange={e => setNewPrice(e.target.value)} className="admin-input" required /></div>
+                <div><label style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>Stock Qty *</label><input type="number" ref={qtyRef} onKeyDown={e => handleKeyDown(e, shelfRef)} value={newQty} onChange={e => setNewQty(e.target.value)} className="admin-input" required /></div>
+                <div><label style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>Barcode (Optional)</label><input type="text" ref={barcodeRef} onKeyDown={e => handleKeyDown(e, nameRef)} value={newBarcode} onChange={e => setNewBarcode(e.target.value)} className="admin-input" /></div>
+                <div><label style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>Shelf No</label><input type="text" ref={shelfRef} placeholder="Maslan: Rack 1" value={newShelf} onChange={e => setNewShelf(e.target.value)} className="admin-input" /></div>
+                <div style={{display:'flex', alignItems:'flex-end', gap: '5px', gridColumn: '1 / -1'}}>
+                  {editingId && <button type="button" onClick={handleCancelEdit} className="admin-btn" style={{background:'#64748b', padding:'10px', flex: 1}}>❌ Cancel</button>}
+                  <button type="submit" className="admin-btn" style={{background: editingId ? '#10b981' : '#f59e0b', padding:'10px', flex: 2}}>{editingId ? '💾 Update' : '💾 Save'}</button>
                 </div>
               </form>
             </div>
 
             <div className="admin-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '5px' }}>
                 <h2 className="modern-title" style={{margin: 0}}>📦 Godam Stock</h2>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                   <button onClick={downloadInventoryExcel} className="admin-btn" style={{background: '#10b981'}}>⬇️ Excel</button>
                   <button onClick={handlePrintInventoryPDF} className="admin-btn" style={{background: '#3b82f6'}}>🖨️ PDF</button>
-                  <button onClick={handleDeleteAllItems} className="admin-btn" style={{background: '#ef4444'}}>🚨 Delete All</button>
+                  <button onClick={handleDeleteAllItems} className="admin-btn" style={{background: '#ef4444'}}>🚨 Del All</button>
                 </div>
               </div>
               <div className="table-responsive">
@@ -265,9 +283,9 @@ export default function AdminDashboard() {
                         <td style={{color:'#3b82f6', fontWeight:'bold'}}>{item.category || 'N/A'}</td>
                         <td style={{fontWeight:'bold'}}>Rs. {item.price}</td>
                         <td style={{fontWeight:'900', color: item.quantity<4?'#ef4444':'#10b981'}}>{item.quantity}</td>
-                        <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
-                          <button onClick={() => handleEditClick(item)} className="admin-btn" style={{background:'#f59e0b', padding:'6px 10px', fontSize:'12px'}}>✏️</button>
-                          <button onClick={() => handleDeleteItem(item.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️</button>
+                        <td style={{textAlign:'right', display:'flex', gap:'3px', justifyContent:'flex-end'}}>
+                          <button onClick={() => handleEditClick(item)} className="admin-btn" style={{background:'#f59e0b'}}>✏️</button>
+                          <button onClick={() => handleDeleteItem(item.id)} className="admin-btn" style={{background:'#ef4444'}}>🗑️</button>
                         </td>
                       </tr>
                     ))}
@@ -280,9 +298,20 @@ export default function AdminDashboard() {
 
         {activeTab === 'sales' && (
           <div className="admin-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '5px' }}>
               <h2 className="modern-title" style={{margin: 0}}>💰 Sales Report</h2>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              
+              {/* 🌟 NAYA: Search Bill Input */}
+              <input 
+                type="number" 
+                placeholder="🔍 Bill ID se dhoondein..." 
+                value={searchBillId} 
+                onChange={e => setSearchBillId(e.target.value)} 
+                className="admin-input" 
+                style={{flex: '1 1 120px', maxWidth: '250px'}} 
+              />
+              
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                 <button onClick={downloadSalesExcel} className="admin-btn" style={{background: '#10b981'}}>⬇️ Excel</button>
                 <button onClick={handlePrintSalesPDF} className="admin-btn" style={{background: '#3b82f6'}}>🖨️ PDF</button>
               </div>
@@ -290,22 +319,22 @@ export default function AdminDashboard() {
             
             <div className="table-responsive">
               <table>
-                <thead><tr><th>Bill No</th><th>Date</th><th>Total</th><th>Payment</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
+                <thead><tr><th>Bill</th><th>Date</th><th>Total</th><th>Pay</th><th style={{textAlign:'right'}}>Actions</th></tr></thead>
                 <tbody>
-                  {sales.map(sale => (
+                  {filteredSales.map(sale => (
                     <tr key={sale.id}>
                       <td style={{fontWeight:'bold'}}>#{sale.id}</td>
                       <td style={{color:'var(--text-muted)'}}>{new Date(sale.created_at).toLocaleDateString('en-PK')}</td>
                       <td style={{fontWeight:'900', color:'#10b981'}}>Rs. {sale.total_amount.toLocaleString()}</td>
-                      <td><span style={{background:'rgba(148,163,184,0.1)', padding:'4px 8px', borderRadius:'4px', fontWeight:'bold', fontSize:'12px'}}>{sale.payment_method || 'Cash'}</span></td>
-                      <td style={{textAlign:'right', display:'flex', gap:'5px', justifyContent:'flex-end'}}>
-                        <button onClick={() => handleEditSaleClick(sale)} className="admin-btn" style={{background:'#f59e0b', padding:'6px 10px', fontSize:'12px'}}>✏️</button>
-                        <button onClick={() => handleReprintReceipt(sale)} className="admin-btn" style={{background:'#3b82f6', padding:'6px 10px', fontSize:'12px'}}>🖨️</button>
-                        <button onClick={() => handleDeleteSale(sale.id)} className="admin-btn" style={{background:'#ef4444', padding:'6px 10px', fontSize:'12px'}}>🗑️</button>
+                      <td><span style={{background:'rgba(148,163,184,0.1)', padding:'2px 4px', borderRadius:'4px', fontWeight:'bold', fontSize:'9px'}}>{sale.payment_method || 'Cash'}</span></td>
+                      <td style={{textAlign:'right', display:'flex', gap:'3px', justifyContent:'flex-end'}}>
+                        <button onClick={() => handleEditSaleClick(sale)} className="admin-btn" style={{background:'#f59e0b'}}>✏️</button>
+                        <button onClick={() => handleReprintReceipt(sale)} className="admin-btn" style={{background:'#3b82f6'}}>🖨️</button>
+                        <button onClick={() => handleDeleteSale(sale.id)} className="admin-btn" style={{background:'#ef4444'}}>🗑️</button>
                       </td>
                     </tr>
                   ))}
-                  {sales.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding:'20px'}}>Koi sale nahi mili.</td></tr>}
+                  {filteredSales.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding:'20px'}}>Koi sale nahi mili.</td></tr>}
                 </tbody>
               </table>
             </div>
